@@ -143,15 +143,15 @@ CREATE TRIGGER trg_ppp_touch
 BEFORE UPDATE ON project_progress_pages
 FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
 
--- Helpful indexes for listing & search
-CREATE INDEX IF NOT EXISTS idx_ppp_project_published
-  ON project_progress_pages(project_id, published_at DESC);
+---- Helpful indexes for listing & search
+--CREATE INDEX IF NOT EXISTS idx_ppp_project_published
+  --ON project_progress_pages(project_id, published_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_ppp_title_trgm
-  ON project_progress_pages USING gin (title gin_trgm_ops);
+--CREATE INDEX IF NOT EXISTS idx_ppp_title_trgm
+  --ON project_progress_pages USING gin (title gin_trgm_ops);
 
-CREATE INDEX IF NOT EXISTS idx_ppp_content_trgm
-  ON project_progress_pages USING gin (content_md gin_trgm_ops);
+--CREATE INDEX IF NOT EXISTS idx_ppp_content_trgm
+  --ON project_progress_pages USING gin (content_md gin_trgm_ops);
 
 -- Ensure the task (if provided) belongs to the same project
 CREATE OR REPLACE FUNCTION te_ensure_same_project() RETURNS trigger AS $$
