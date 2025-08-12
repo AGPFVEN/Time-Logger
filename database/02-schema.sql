@@ -25,22 +25,23 @@ CREATE TABLE IF NOT EXISTS projects (
 
 -- ===== Tasks (adjacency model) =====
 CREATE TABLE IF NOT EXISTS tasks (
-  id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  project_id  UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  parent_id   UUID REFERENCES tasks(id) ON DELETE CASCADE,
-  title       TEXT NOT NULL,
-  description TEXT,
-  status_id   SMALLINT REFERENCES task_statuses(id),
-  position    INT DEFAULT 1000,
-  finish_at   TIMESTAMPTZ,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id        UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  parent_id         UUID REFERENCES tasks(id) ON DELETE CASCADE,
+  title             TEXT NOT NULL,
+  description       TEXT,
+  status_id         SMALLINT REFERENCES task_statuses(id),
+  position          INT DEFAULT 1000,
+  finish_at_initial TIMESTAMPTZ,
+  finish_at         TIMESTAMPTZ,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT tasks_not_self_parent CHECK (id <> parent_id)
 );
 
 -- Index to list tasks fast
-CREATE INDEX IF NOT EXISTS idx_tasks_project_parent
-  ON tasks(project_id, parent_id, position);
+-- CREATE INDEX IF NOT EXISTS idx_tasks_project_parent
+  -- ON tasks(project_id, parent_id, position);
 
 -- Enforce: parent & child belong to the same project
 CREATE OR REPLACE FUNCTION ensure_same_project() RETURNS trigger AS $$
@@ -67,9 +68,9 @@ BEFORE INSERT OR UPDATE OF parent_id, project_id ON tasks
 FOR EACH ROW EXECUTE FUNCTION ensure_same_project();
 
 -- Partial index for root tasks
-CREATE INDEX IF NOT EXISTS idx_tasks_roots
-  ON tasks(project_id, position)
-  WHERE parent_id IS NULL;
+--CREATE INDEX IF NOT EXISTS idx_tasks_roots
+  --ON tasks(project_id, position)
+  --WHERE parent_id IS NULL;
 
 -- ===== Tags (With join table) =====
 CREATE TABLE IF NOT EXISTS tags (
@@ -82,13 +83,13 @@ CREATE TABLE IF NOT EXISTS tags (
 
 CREATE TABLE IF NOT EXISTS project_tags (
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-  tag_id     SMALLINT NOT NULL REFERENCES tags(id)     ON DELETE CASCADE,
+  tag_id     SMALLINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY (project_id, tag_id)
 );
 
 CREATE TABLE IF NOT EXISTS task_tags (
   task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  tag_id  SMALLINT NOT NULL REFERENCES tags(id)  ON DELETE CASCADE,
+  tag_id  SMALLINT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
   PRIMARY KEY (task_id, tag_id)
 );
 
@@ -116,7 +117,43 @@ CREATE TABLE IF NOT EXISTS time_entries (
   ) STORED
 );
 
--- 2) Ensure the task (if provided) belongs to the same project
+-- ===== Project progress pages =====
+CREATE TABLE IF NOT EXISTS project_progress_pages (
+  id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  project_id       UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title            TEXT NOT NULL,
+  content_md       TEXT NOT NULL,
+  progress_percent NUMERIC(5,2) CHECK (progress_percent >= 0 AND progress_percent <= 100),
+  period_start     DATE,
+  period_end       DATE,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Keep updated_at fresh
+CREATE OR REPLACE FUNCTION touch_updated_at() RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_ppp_touch ON project_progress_pages;
+CREATE TRIGGER trg_ppp_touch
+BEFORE UPDATE ON project_progress_pages
+FOR EACH ROW EXECUTE FUNCTION touch_updated_at();
+
+-- Helpful indexes for listing & search
+CREATE INDEX IF NOT EXISTS idx_ppp_project_published
+  ON project_progress_pages(project_id, published_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_ppp_title_trgm
+  ON project_progress_pages USING gin (title gin_trgm_ops);
+
+CREATE INDEX IF NOT EXISTS idx_ppp_content_trgm
+  ON project_progress_pages USING gin (content_md gin_trgm_ops);
+
+-- Ensure the task (if provided) belongs to the same project
 CREATE OR REPLACE FUNCTION te_ensure_same_project() RETURNS trigger AS $$
 BEGIN
   IF NEW.task_id IS NULL THEN
@@ -141,6 +178,6 @@ CREATE TRIGGER trg_te_same_project
 BEFORE INSERT OR UPDATE OF project_id, task_id ON time_entries
 FOR EACH ROW EXECUTE FUNCTION te_ensure_same_project();
 
--- 3) Helpful indexes
-CREATE INDEX IF NOT EXISTS idx_te_project_started ON time_entries(project_id, started_at);
-CREATE INDEX IF NOT EXISTS idx_te_task_started    ON time_entries(task_id, started_at) WHERE task_id IS NOT NULL;
+-- Helpful indexes
+-- CREATE INDEX IF NOT EXISTS idx_te_project_started ON time_entries(project_id, started_at);
+-- CREATE INDEX IF NOT EXISTS idx_te_task_started    ON time_entries(task_id, started_at) WHERE task_id IS NOT NULL;
