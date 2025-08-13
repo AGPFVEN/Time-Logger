@@ -1,4 +1,5 @@
 services:
+  # ==== Database ====
   db:
     image: postgres:16-alpine
     container_name: pg
@@ -12,7 +13,7 @@ services:
       PGDATA: ${PGDATA}
     volumes:
       - pgdata:${PGDATA}
-      - ./init:/docker-entrypoint-initdb.d:ro
+      - ./database/set-up:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -29,7 +30,6 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin
-    # optional persistent pgAdmin state
     volumes:
       - pgadmin:/var/lib/pgadmin
 

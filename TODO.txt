@@ -1,0 +1,7 @@
+# Create a testing workflow
+meanwhile:
+    To test the db use:
+
+    docker exec -i pg psql -U app -d appdb < database/tests/01-rows.sql
+
+    Then explore the db to see if changes applied
