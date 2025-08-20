@@ -4,4 +4,8 @@ meanwhile:
 
     docker exec -i pg psql -U app -d appdb < database/tests/01-rows.sql
 
-    Then explore the db to see if changes applied
+    Then explore the db to see if changes applied (I use the postgres vscode extension)
+        localhost
+        app
+        secret
+        5433
