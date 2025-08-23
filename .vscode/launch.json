@@ -23,6 +23,18 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
+        },
+        {
+            "name": "Google Cloud Functions (backend)",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/backend/cmd/main.go",
+            "cwd": "${workspaceFolder}/backend",
+            "env": {
+                "FUNCTION_TARGET": "HelloWorld",
+                "LOCAL_ONLY": "true"
+            }
         }
     ]
 }
