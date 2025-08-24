@@ -9,6 +9,7 @@ import (
 
 func init() {
 	functions.HTTP("HelloWorld", helloWorld)
+	functions.HTTP("CreateProject", createProject)
 }
 
 // helloWorld writes "Hello, World!" to the HTTP response.
