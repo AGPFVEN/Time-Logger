@@ -3,16 +3,26 @@ package main
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	// Blank-import the function package so the init() runs
 	_ "time-logger/API"
+
 	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
+	"github.com/lpernett/godotenv"
 )
 
 func main() {
+	// Load local envs
+	envPath, _ := filepath.Abs("../.env")
+	err := godotenv.Load(envPath)
+  	if err != nil {
+    	log.Fatal("Error loading .env file")
+  	}
+
 	// Use PORT environment variable, or default to 8080.
 	port := "8080"
-	if envPort := os.Getenv("PORT"); envPort != "" {
+	if envPort := os.Getenv("BACKEND_PORT"); envPort != "" {
 		port = envPort
 	}
 	

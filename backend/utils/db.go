@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -10,7 +11,12 @@ import (
 // ConnectDB connects to PostgreSQL and returns the connection
 func ConnectDB(dbURL string) (*pgx.Conn, error) {
 	if dbURL == "" {
-		dbURL = "postgres://app:secret@localhost:5433/appdb?sslmode=disable"
+		dbURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", 
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_URL"),
+		os.Getenv("DB_LOCAL_PORT"),
+		os.Getenv("DB_SELECTED"))
 	}
 
 	conn, err := pgx.Connect(context.Background(), dbURL)

@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/GoogleCloudPlatform/functions-framework-go v1.9.2
 	github.com/jackc/pgx/v5 v5.7.5
+	github.com/lpernett/godotenv v0.0.0-20230527005122-0de1d4c5ef5e
 )
 
 require (
