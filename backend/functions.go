@@ -3,8 +3,16 @@ package function
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// Global database pool - initialized once per function instance
+var (
+	pool *pgxpool.Pool
+	once sync.Once
 )
 
 func init() {
