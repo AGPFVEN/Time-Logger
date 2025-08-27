@@ -1,12 +1,13 @@
 # To do later (not prioritary)
 - Create a testing workflow
+- Implement code formatters
 
 # To do
-- Finish thinking how will be the app
+- Projects CRUD (Backend)
 
 # Doing
 - Projects view
-- Lateral sidebar
+- DB Pooling (Create a pool of db connections)
 
 # Meanwhile:
     #DB Testing
