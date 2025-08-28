@@ -10,8 +10,9 @@ import (
 )
 
 // Global database pool - initialized once per function instance
+// Singleton vs Global var vs getter func
 var (
-	pool *pgxpool.Pool
+	Pool *pgxpool.Pool
 	once sync.Once
 )
 
