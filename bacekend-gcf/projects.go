@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"time-logger/API/utils"
+	"github.com/AGPFVEN/Time-Logger/backend/utils"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 )

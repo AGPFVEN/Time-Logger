@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 
 	// Blank-import the function package so the init() runs
-	_ "time-logger/API"
+	_ "github.com/AGPFVEN/Time-Logger/backend"
 
 	"github.com/GoogleCloudPlatform/functions-framework-go/funcframework"
 	"github.com/lpernett/godotenv"

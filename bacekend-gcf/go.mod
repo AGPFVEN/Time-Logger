@@ -1,4 +1,4 @@
-module time-logger/API
+module github.com/AGPFVEN/Time-Logger/backend
 
 go 1.25.0
 
