@@ -6,17 +6,9 @@
 - Projects CRUD (Backend)
 
 # Doing
-- Projects view
-- DB Pooling (Create a pool of db connections)
+- HFT style
+    - Restructure architecture
 
 # Meanwhile:
-    #DB Testing
-        To test the db use:
-
-        docker exec -i pg psql -U app -d appdb < database/tests/01-rows.sql
-
-        Then explore the db to see if changes applied (I use the postgres vscode extension)
-            localhost
-            app
-            secret
-            5433
+    - Deciding architecture
+    https://claude.ai/chat/50807100-ed73-4b0d-adff-61421bb9b395
