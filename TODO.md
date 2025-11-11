@@ -1,0 +1,23 @@
+ - [ ] Hacer línea del día de hoy
+	 - [x] Iniciar con append
+		 - [x] Meter la hora de inicio en la línea
+		 - [x] Meter proyecto en la línea
+		 - [x] Meter task en la línea
+	 - [ ] Terminar con append
+		 - [ ] Identificar cuando toca final de línea
+		 - [ ] Meter descripción a más detalle en la línea
+		 - [ ] Meter la hora final en la línea
+ - [ ] Hacer keybinding (Quizás local para no hacer nada raro)
+ - [ ] Mejorar experiencia
+	 - [ ] Hacer refresh de la misma línea y no hacer una línea por print 
+	 - [ ] Al seleccionar proyecto hacer flush
+	 - [ ] Al seleccionar proyecto mostrar el selector de tasks
+	 - [ ] Qué borrar muestre el selector correcto
+ - [ ] Pasar archivo a otro proyecto
+ - [ ] Organización automática de archivos (como está en el otro proyecto)
+ - [ ] Hacer análisis básico en rust
+	 - [ ] Día
+	 - [ ] Semana
+ - [ ] Hacer base de datos
+ - [ ] Meter datos en DB
+ - [ ] Migrar de archivos a DB

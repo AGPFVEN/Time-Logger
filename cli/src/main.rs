@@ -3,7 +3,7 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
-use chrono::Local;
+use chrono::prelude::*;
 use regex::Regex;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
@@ -67,7 +67,7 @@ fn order_vector(s: &str, v: &Vec<String>) -> Vec<String> {
     return result;
 }
 
-fn standard_command() {
+fn start_record_note() {
     // Check if file exists, if not create it
     let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
     let filename_path = Path::new(&filename);
@@ -101,6 +101,7 @@ fn standard_command() {
     println!("Modo raw activado - lee carácter por carácter\r");
 
     let mut selected_project: Option<File> = None;
+    let mut selected_project_name: Option<String> = None;
     let mut selected_task: Option<String> = None;
     let mut project_tasks: Vec<String> = Vec::new();
     let mut selector: Vec<String>;
@@ -174,15 +175,21 @@ fn standard_command() {
                             }
 
                             // Open the file for writing (append mode)
+                            //TODO: No crear una referencia
                             match OpenOptions::new()
                                 .write(true)
                                 .append(true)
                                 .open(&project_path) {
-                                Ok(file) => selected_project = Some(file),
+                                Ok(file) => {
+                                    selected_project = Some(file);
+                                    selected_project_name = Some(selector[*number].to_string());
+                                },
                                 Err(e) => eprintln!("Failed to open file: {}", e)
                             }
 
                             input_buffer.clear();
+                        } else if selected_task.is_none() {
+                            selected_task = Some(selector[*number].to_string());
                         }
                     }
                 }
@@ -208,6 +215,7 @@ fn standard_command() {
                             Ok(file) => selected_project = Some(file),
                             Err(e) => eprintln!("Failed to create file: {}", e)
                         }
+                        //TODO: testear este caso
                     } else if selected_task.is_none() {
                         let task_to_save = input_buffer.trim();
                         project_tasks.push(task_to_save.to_string());
@@ -258,6 +266,24 @@ fn standard_command() {
                 }
                 _ => {}
             }
+
+            if !selected_task.is_none() {
+                if let Err(e) = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open(&filename_path)
+                .and_then(|mut file| {
+                    use std::io::Write;
+                    writeln!(file, "{} {}_{}", 
+                        chrono::Utc::now().format("%H:%M"),
+                        selected_project_name.as_ref().unwrap().replace(" ", "-").replace(".txt", ""),
+                        selected_task.as_ref().unwrap().replace(" ", "-")
+                    )
+                }) {
+                eprintln!("Failed to write to project file: {}", e);
+            }
+                break;
+            }
         }
     }
 
@@ -276,7 +302,44 @@ fn main() {
 
     match args[1].as_str() {
         _=>{
-            standard_command();
+            let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
+            let filename_path = Path::new(&filename);
+            if !filename_path.exists() {
+                start_record_note();
+            } else {
+                match OpenOptions::new()
+                .read(true)
+                .write(true)
+                .append(true)
+                .open(&filename_path) {
+                    Ok(mut file) => {
+                        use std::io::{BufRead, BufReader, Write};
+        
+                        // Read only the last line
+                        let reader = BufReader::new(&file);
+                        let mut last_line = String::new();
+        
+                        for line in reader.lines() {
+                            if let Ok(line_content) = line {
+                                last_line = line_content;
+                            }
+                        }
+        
+                        // Use last_line here
+                        if !last_line.is_empty() {
+                            println!("Last line: {}", last_line);
+                        }
+        
+                        //// Now append to the file
+                        //if let Err(e) = writeln!(file, "{} {}_{}", 
+                        //) {
+                            //eprintln!("Failed to write to project file: {}", e);
+                        //}
+                    },
+                    Err(e) => eprintln!("Failed to open file: {}", e)
+                }
+
+            }
         }
     }
 }
