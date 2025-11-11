@@ -1,3 +1,282 @@
+use std::env;
+use std::fs;
+use std::fs::{File, OpenOptions};
+use std::io::{self, Write};
+use std::path::Path;
+use chrono::Local;
+use regex::Regex;
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEvent},
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
+    cursor,
+    execute,
+};
+
+const SEMANA_ACTUAL_PATH: &str = "./data/Esta semana";
+const PROYECTOS_PATH: &str = "./data/Proyectos";
+
+// Función para calcular la distancia de Levenshtein entre dos strings.
+//TODO: Posible optimización con distancia levenshtein 
+fn levenshtein_distancia(s1: &str, s2: &str) -> usize {
+    let len1 = s1.chars().count();
+    let len2 = s2.chars().count();
+
+    let mut matriz = vec![vec![0; len2 + 1]; len1 + 1];
+
+    for i in 0..=len1 {
+        matriz[i][0] = i;
+    }
+
+    for j in 0..=len2 {
+        matriz[0][j] = j;
+    }
+
+    for (i, char1) in s1.chars().enumerate() {
+        for (j, char2) in s2.chars().enumerate() {
+            let cost = if char1 == char2 { 0 } else { 1 };
+            matriz[i + 1][j + 1] = (matriz[i][j + 1] + 1).min(matriz[i + 1][j] + 1).min(matriz[i][j] + cost);
+        }
+    }
+
+    matriz[len1][len2]
+}
+
+//TODO: Posible optimización con orden de vectores (Se está usando el peor algoritmo)
+fn order_vector(s: &str, v: &Vec<String>) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
+    let mut result_dis: Vec<usize> = Vec::new();
+    for val in v {
+        let lev = levenshtein_distancia(&s.to_lowercase(), &val.to_lowercase());
+        let mut used_index = 0;
+        let mut used = false;
+        for (index, value) in result_dis.iter().enumerate() {
+            if lev < *value {
+               result.insert(index, val.to_string()); 
+               used_index = index;
+               used = true;
+               break;
+            }
+        }
+        if used == false {
+            result.push(val.to_string());
+            result_dis.push(lev);
+        } else {
+            result_dis.insert(used_index, lev);
+        }
+    }
+    return result;
+}
+
+fn standard_command() {
+    // Check if file exists, if not create it
+    let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
+    let filename_path = Path::new(&filename);
+    if !filename_path.exists() {
+        println!("File does not exist, creating it...");
+        if let Err(e) = fs::write(filename_path, "") {
+            println!("Error creating file: {}", e);
+        } else {
+            println!("File created sucessfully");
+        }
+    }
+
+    // Get list of proyects
+    let mut file_names: Vec<String> = Vec::new();
+    match fs::read_dir(PROYECTOS_PATH){
+        Ok(entries) => {
+            file_names = entries
+                .filter_map(|entry| {
+                        entry.ok()
+                            .and_then(|e| e.file_name().into_string().ok())
+                    })
+                .collect();
+        }
+        Err(e) => {
+            eprintln!("Error reading directory: {}", e); 
+        }
+    }
+
+    // Empezar programa para hacer una línea
+    println!("Escribe '/q' para salir del programa");
+    println!("Modo raw activado - lee carácter por carácter\r");
+
+    let mut selected_project: Option<File> = None;
+    let mut selected_task: Option<String> = None;
+    let mut project_tasks: Vec<String> = Vec::new();
+    let mut selector: Vec<String>;
+    let re = Regex::new(r"\\([0-9])$").unwrap();
+
+    // Activar modo raw
+    enable_raw_mode().unwrap();
+
+    let mut input_buffer = String::new();
+
+    print!("> ");
+    io::stdout().flush().unwrap();
+
+    loop {
+        // Leer evento del teclado
+        if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
+            match code {
+                KeyCode::Char(c) => {
+                    //TODO: Meter un prompt de qué proyecto está el usuario
+                    // Agregar carácter al buffer
+                    input_buffer.push(c);
+
+                    // Redibujar todo
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo(0, cursor::position().unwrap().1),
+                        Clear(ClearType::FromCursorDown)
+                    ).unwrap();
+
+                    // Mostrar la línea de entrada
+                    print!("> {}\r\n", input_buffer);
+
+                    // Mostrar el buffer debajo
+                    if selected_project.is_none() {
+                        selector = order_vector(&input_buffer, &file_names);
+                    } else {
+                        selector = order_vector(&input_buffer, &project_tasks);
+                    }
+                    print!("{:?}", selector);
+
+                    // Volver al final de la línea de entrada
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+                    ).unwrap();
+                    io::stdout().flush().unwrap();
+
+                    // Verificar si el buffer termina con "/q"
+                    if input_buffer.ends_with("\\q") {
+                        print!("\r\n\r\n");
+                        println!("Saliendo del programa...\r");
+                        break;
+                    }
+
+                    // Verificar si el buffer termina con "/q"
+                    if let Some(caps) = re.captures(&input_buffer) {
+                        let number = &caps[1].parse::<usize>().unwrap();  // This is "5"
+                        //TODO: Quitar los .txt del search
+                        //let project_path = format!("{}/{}.txt", PROYECTOS_PATH, &file_names[*number]);
+                        let project_path = format!("{}/{}", PROYECTOS_PATH, &selector[*number]);
+
+                        // Read project file and populate project_tasks
+                        if selected_project.is_none() {
+                            match fs::read_to_string(&project_path) {
+                                Ok(content) => {
+                                    project_tasks = content.lines()
+                                        .map(|line| line.to_string())
+                                        .collect();
+                                },
+                                Err(e) => eprintln!("Failed to read project file: {}", e)
+                            }
+
+                            // Open the file for writing (append mode)
+                            match OpenOptions::new()
+                                .write(true)
+                                .append(true)
+                                .open(&project_path) {
+                                Ok(file) => selected_project = Some(file),
+                                Err(e) => eprintln!("Failed to open file: {}", e)
+                            }
+
+                            input_buffer.clear();
+                        }
+                    }
+                }
+                KeyCode::Enter => {
+
+                    // Limpiar todo desde el cursor hacia abajo
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo(0, cursor::position().unwrap().1),
+                        Clear(ClearType::FromCursorDown)
+                    ).unwrap();
+
+                    // Procesar la línea completa
+                    print!("\r\n");
+
+                    if selected_project.is_none() {
+                        let project_path = PROYECTOS_PATH.to_string() + "/" + &input_buffer.trim() + ".txt";
+                        match OpenOptions::new()
+                            .write(true)
+                            .append(true)
+                            .create(true)
+                            .open(&project_path) {
+                            Ok(file) => selected_project = Some(file),
+                            Err(e) => eprintln!("Failed to create file: {}", e)
+                        }
+                    } else if selected_task.is_none() {
+                        let task_to_save = input_buffer.trim();
+                        project_tasks.push(task_to_save.to_string());
+
+                        if let Some(ref mut file) = selected_project {
+                            if let Err(e) = writeln!(file, "{}\n", task_to_save) {
+                                eprintln!("Error writing to file: {}", e);
+                            }
+                        }
+
+                        selected_task = Some(task_to_save.to_string());
+                    }
+
+                    input_buffer.clear();
+                    print!("> ");
+                    io::stdout().flush().unwrap();
+                }
+                KeyCode::Backspace => {
+                    // Borrar último carácter
+                    if !input_buffer.is_empty() {
+                        input_buffer.pop();
+
+                        // Redibujar todo
+                        execute!(
+                            io::stdout(),
+                            cursor::MoveTo(0, cursor::position().unwrap().1),
+                            Clear(ClearType::FromCursorDown)
+                        ).unwrap();
+
+                        // Mostrar la línea de entrada
+                        print!("> {}\r\n", input_buffer);
+
+                        // Mostrar el buffer debajo
+                        print!("{:?}", order_vector(&input_buffer, &file_names));
+
+                        // Volver al final de la línea de entrada
+                        execute!(
+                            io::stdout(),
+                            cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+                        ).unwrap();
+                        io::stdout().flush().unwrap();
+                    }
+                }
+                KeyCode::Esc => {
+                    print!("\r\n\r\n");
+                    println!("Saliendo del programa...\r");
+                    break;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // Desactivar modo raw al salir
+    disable_raw_mode().unwrap();
+
+}
+
 fn main() {
-    println!("Hello, world!");
+    let mut args: Vec<String> = env::args().collect();
+
+    if args.len() < 2 {
+        println!("No argument passed to program, it will execute add");
+        args.push("-a".to_string());
+    }
+
+    match args[1].as_str() {
+        _=>{
+            standard_command();
+        }
+    }
 }
