@@ -1,19 +1,26 @@
- - [ ] Hacer línea del día de hoy
+ - [x] Hacer línea del día de hoy
 	 - [x] Iniciar con append
 		 - [x] Meter la hora de inicio en la línea
 		 - [x] Meter proyecto en la línea
 		 - [x] Meter task en la línea
-	 - [ ] Terminar con append
-		 - [ ] Identificar cuando toca final de línea
-		 - [ ] Meter descripción a más detalle en la línea
-		 - [ ] Meter la hora final en la línea
- - [ ] Hacer keybinding (Quizás local para no hacer nada raro)
+	 - [x] Terminar con append
+		 - [x] Identificar cuando toca final de línea
+		 - [x] Meter descripción a más detalle en la línea
+		 - [x] Meter la hora final en la línea
+	 - [x] Meter horas de horario del usuario
+ - [x] Hacer keybinding (Quizás local para no hacer nada raro)
+ - [ ] Arreglar caso proyecto nuevo y task nuevo
+ - [ ] Probar caso proyecto existente y task nuevo
+ - [ ] Pasar archivo a otro proyecto
  - [ ] Mejorar experiencia
+	 - [ ] Quitar \q y dejar esc para salir
 	 - [ ] Hacer refresh de la misma línea y no hacer una línea por print 
 	 - [ ] Al seleccionar proyecto hacer flush
 	 - [ ] Al seleccionar proyecto mostrar el selector de tasks
 	 - [ ] Qué borrar muestre el selector correcto
- - [ ] Pasar archivo a otro proyecto
+	 - [ ] Qué el terminal quede bien (no mezclar comando con línea de terminal en la misma línea)
+	 - [ ] Poder usar archivos vacíos
+	 - [ ] Manejar indices al seleccionar proyectos/tasks
  - [ ] Organización automática de archivos (como está en el otro proyecto)
  - [ ] Hacer análisis básico en rust
 	 - [ ] Día

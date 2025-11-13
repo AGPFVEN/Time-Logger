@@ -10,6 +10,7 @@
             "request": "launch",
             "args": [],
             "cwd": "${workspaceFolder}",
+            "sourceLanguages": ["rust"],
             "cargo": {
                 "args": [
                     "run",

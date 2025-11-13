@@ -1,6 +1,7 @@
 use std::env;
 use std::fs;
 use std::fs::{File, OpenOptions};
+use std::io::Read;
 use std::io::{self, Write};
 use std::path::Path;
 use chrono::prelude::*;
@@ -16,7 +17,7 @@ const SEMANA_ACTUAL_PATH: &str = "./data/Esta semana";
 const PROYECTOS_PATH: &str = "./data/Proyectos";
 
 // Función para calcular la distancia de Levenshtein entre dos strings.
-//TODO: Posible optimización con distancia levenshtein 
+//TODO: Posible optimización con distancia levenshtein
 fn levenshtein_distancia(s1: &str, s2: &str) -> usize {
     let len1 = s1.chars().count();
     let len2 = s2.chars().count();
@@ -51,7 +52,7 @@ fn order_vector(s: &str, v: &Vec<String>) -> Vec<String> {
         let mut used = false;
         for (index, value) in result_dis.iter().enumerate() {
             if lev < *value {
-               result.insert(index, val.to_string()); 
+               result.insert(index, val.to_string());
                used_index = index;
                used = true;
                break;
@@ -92,7 +93,7 @@ fn start_record_note() {
                 .collect();
         }
         Err(e) => {
-            eprintln!("Error reading directory: {}", e); 
+            eprintln!("Error reading directory: {}", e);
         }
     }
 
@@ -274,8 +275,8 @@ fn start_record_note() {
                 .open(&filename_path)
                 .and_then(|mut file| {
                     use std::io::Write;
-                    writeln!(file, "{} {}_{}", 
-                        chrono::Utc::now().format("%H:%M"),
+                    write!(file, "{} {}_{} (",
+                        Local::now().format("%H:%M"),
                         selected_project_name.as_ref().unwrap().replace(" ", "-").replace(".txt", ""),
                         selected_task.as_ref().unwrap().replace(" ", "-")
                     )
@@ -292,7 +293,121 @@ fn start_record_note() {
 
 }
 
-fn main() {
+fn end_record_note() {
+    let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
+    let filename_path = Path::new(&filename);
+    // Activar modo raw
+    enable_raw_mode().unwrap();
+
+    let mut input_buffer = String::new();
+
+    print!("> ");
+    io::stdout().flush().unwrap();
+    loop {
+        // Leer evento del teclado
+        if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
+            match code {
+                KeyCode::Char(c) => {
+                    // Agregar carácter al buffer
+                    input_buffer.push(c);
+
+                    // Redibujar todo
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo(0, cursor::position().unwrap().1),
+                        Clear(ClearType::FromCursorDown)
+                    ).unwrap();
+
+                    // Mostrar la línea de entrada
+                    print!("> {}\r\n", input_buffer);
+
+                    // Volver al final de la línea de entrada
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+                    ).unwrap();
+                    io::stdout().flush().unwrap();
+
+                    // Verificar si el buffer termina con "/q"
+                    if input_buffer.ends_with("\\q") {
+                        print!("\r\n\r\n");
+                        println!("Saliendo del programa...\r");
+                        break;
+                    }
+                }
+                KeyCode::Enter => {
+                    // Limpiar todo desde el cursor hacia abajo
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo(0, cursor::position().unwrap().1),
+                        Clear(ClearType::FromCursorDown)
+                    ).unwrap();
+
+                    // Procesar la línea completa
+                    print!("\r\n");
+
+                        match OpenOptions::new()
+                            .append(true)
+                            .create(true)
+                            .open(&filename_path) {
+                            Ok(mut file) => {
+                                match writeln!(file,
+                                    "{}) {}",
+                                    input_buffer,
+                                    Local::now().format("%H:%M")
+                                ){
+                                    Ok(()) => {}
+                                    Err(e) => eprintln!("Failed to write in file: {}", e)
+                                }
+                            },
+                            Err(e) => eprintln!("Failed to create file: {}", e)
+                        }
+
+                    input_buffer.clear();
+                    print!("> ");
+                    io::stdout().flush().unwrap();
+                    break;
+                }
+                KeyCode::Backspace => {
+                    // Borrar último carácter
+                    if !input_buffer.is_empty() {
+                        input_buffer.pop();
+
+                        // Redibujar todo
+                        execute!(
+                            io::stdout(),
+                            cursor::MoveTo(0, cursor::position().unwrap().1),
+                            Clear(ClearType::FromCursorDown)
+                        ).unwrap();
+
+                        // Mostrar la línea de entrada
+                        print!("> {}\r\n", input_buffer);
+
+                        // Volver al final de la línea de entrada
+                        execute!(
+                            io::stdout(),
+                            cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+                        ).unwrap();
+                        io::stdout().flush().unwrap();
+                    }
+
+                }
+                KeyCode::Esc => {
+                    print!("\r\n\r\n");
+                    println!("Saliendo del programa...\r");
+                    break;
+                }
+                _ => {}
+            }
+        }
+    }
+
+    // Desactivar modo raw al salir
+    disable_raw_mode().unwrap();
+
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
@@ -307,39 +422,29 @@ fn main() {
             if !filename_path.exists() {
                 start_record_note();
             } else {
-                match OpenOptions::new()
-                .read(true)
-                .write(true)
-                .append(true)
-                .open(&filename_path) {
+                match File::open(filename_path) {
                     Ok(mut file) => {
-                        use std::io::{BufRead, BufReader, Write};
-        
-                        // Read only the last line
-                        let reader = BufReader::new(&file);
-                        let mut last_line = String::new();
-        
-                        for line in reader.lines() {
-                            if let Ok(line_content) = line {
-                                last_line = line_content;
-                            }
+                        use std::io::Seek;
+                        use std::io::SeekFrom;
+
+                        // Seek to 2 bytes before the end
+                        file.seek(SeekFrom::End(-1))?;
+    
+                        // Read the last 2 bytes
+                        let mut buffer = vec![0u8; 1];
+                        file.read_exact(&mut buffer)?;
+    
+                        println!("Byte 0: {} -> char: '{}'", buffer[0], buffer[0] as char);
+                        if buffer[0] == 10 {
+                            start_record_note();
+                        } else {
+                            end_record_note();
                         }
-        
-                        // Use last_line here
-                        if !last_line.is_empty() {
-                            println!("Last line: {}", last_line);
-                        }
-        
-                        //// Now append to the file
-                        //if let Err(e) = writeln!(file, "{} {}_{}", 
-                        //) {
-                            //eprintln!("Failed to write to project file: {}", e);
-                        //}
                     },
                     Err(e) => eprintln!("Failed to open file: {}", e)
                 }
-
             }
         }
     }
+    Ok(())
 }
