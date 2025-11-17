@@ -207,13 +207,17 @@ fn start_record_note() {
                     print!("\r\n");
 
                     if selected_project.is_none() {
-                        let project_path = PROYECTOS_PATH.to_string() + "/" + &input_buffer.trim() + ".txt";
+                        let project_name = input_buffer.trim().to_string() + ".txt";
+                        let project_path = PROYECTOS_PATH.to_string() + "/" + &project_name;
                         match OpenOptions::new()
                             .write(true)
                             .append(true)
                             .create(true)
                             .open(&project_path) {
-                            Ok(file) => selected_project = Some(file),
+                            Ok(file) => {
+                                selected_project = Some(file);
+                                selected_project_name = Some(project_name);
+                            },
                             Err(e) => eprintln!("Failed to create file: {}", e)
                         }
                         //TODO: testear este caso
@@ -222,7 +226,7 @@ fn start_record_note() {
                         project_tasks.push(task_to_save.to_string());
 
                         if let Some(ref mut file) = selected_project {
-                            if let Err(e) = writeln!(file, "{}\n", task_to_save) {
+                            if let Err(e) = writeln!(file, "{}", task_to_save) {
                                 eprintln!("Error writing to file: {}", e);
                             }
                         }
@@ -269,20 +273,25 @@ fn start_record_note() {
             }
 
             if !selected_task.is_none() {
-                if let Err(e) = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .open(&filename_path)
-                .and_then(|mut file| {
-                    use std::io::Write;
-                    write!(file, "{} {}_{} (",
-                        Local::now().format("%H:%M"),
-                        selected_project_name.as_ref().unwrap().replace(" ", "-").replace(".txt", ""),
-                        selected_task.as_ref().unwrap().replace(" ", "-")
-                    )
-                }) {
-                eprintln!("Failed to write to project file: {}", e);
-            }
+                match OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create(true)
+                    .open(&filename_path) {
+                        Ok(mut file) => {
+                            if let Err(e) = write!(file, "{} {}_{} (",
+                                Local::now().format("%H:%M"),
+                                selected_project_name.as_ref().unwrap().replace(" ", "-").replace(".txt", ""),
+                                selected_task.as_ref().unwrap().replace(" ", "-")
+                            ) {
+                                eprintln!("Error writing to file: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error writing to file: {}", e);
+                        }
+                        
+                    }
                 break;
             }
         }
@@ -411,7 +420,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
-        println!("No argument passed to program, it will execute add");
+        println!("No argument passed to program, it will execute add line to todays file");
         args.push("-a".to_string());
     }
 
@@ -419,7 +428,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         _=>{
             let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
             let filename_path = Path::new(&filename);
-            if !filename_path.exists() {
+            if !filename_path.exists() || fs::metadata(filename_path)?.len() == 0 {
                 start_record_note();
             } else {
                 match File::open(filename_path) {

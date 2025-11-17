@@ -9,10 +9,17 @@
 		 - [x] Meter la hora final en la línea
 	 - [x] Meter horas de horario del usuario
  - [x] Hacer keybinding (Quizás local para no hacer nada raro)
- - [ ] Arreglar caso proyecto nuevo y task nuevo
- - [ ] Probar caso proyecto existente y task nuevo
+ - [x] Arreglar primera entrada
+ - [x] Arreglar caso proyecto nuevo y task nuevo
+ - [x] Probar caso proyecto existente y task nuevo
+ - [x] Hacer un comando para ver y editar archivo de hoy
+ - [x] Ver como usar vscode para renombrar task (Regex con búsqueda)
+ - [ ] Dividir código porque el servidor de rust me va a explotar
+ - [ ] Seguir con otra tarea
+ - [ ] Hacer delays de tiempo (empecé hace 5 mins)
  - [ ] Pasar archivo a otro proyecto
  - [ ] Mejorar experiencia
+	 - [ ] Seleccionar con tab
 	 - [ ] Quitar \q y dejar esc para salir
 	 - [ ] Hacer refresh de la misma línea y no hacer una línea por print 
 	 - [ ] Al seleccionar proyecto hacer flush
@@ -28,3 +35,5 @@
  - [ ] Hacer base de datos
  - [ ] Meter datos en DB
  - [ ] Migrar de archivos a DB
+ - [ ] Hacer un comando para repetir última actividad
+ - [ ] Hacer un comando para quitar línea empezada
