@@ -12,61 +12,10 @@ use crossterm::{
     cursor,
     execute,
 };
+use core::{utils};
 
 const SEMANA_ACTUAL_PATH: &str = "./data/Esta semana";
 const PROYECTOS_PATH: &str = "./data/Proyectos";
-
-// Función para calcular la distancia de Levenshtein entre dos strings.
-//TODO: Posible optimización con distancia levenshtein
-fn levenshtein_distancia(s1: &str, s2: &str) -> usize {
-    let len1 = s1.chars().count();
-    let len2 = s2.chars().count();
-
-    let mut matriz = vec![vec![0; len2 + 1]; len1 + 1];
-
-    for i in 0..=len1 {
-        matriz[i][0] = i;
-    }
-
-    for j in 0..=len2 {
-        matriz[0][j] = j;
-    }
-
-    for (i, char1) in s1.chars().enumerate() {
-        for (j, char2) in s2.chars().enumerate() {
-            let cost = if char1 == char2 { 0 } else { 1 };
-            matriz[i + 1][j + 1] = (matriz[i][j + 1] + 1).min(matriz[i + 1][j] + 1).min(matriz[i][j] + cost);
-        }
-    }
-
-    matriz[len1][len2]
-}
-
-//TODO: Posible optimización con orden de vectores (Se está usando el peor algoritmo)
-fn order_vector(s: &str, v: &Vec<String>) -> Vec<String> {
-    let mut result: Vec<String> = Vec::new();
-    let mut result_dis: Vec<usize> = Vec::new();
-    for val in v {
-        let lev = levenshtein_distancia(&s.to_lowercase(), &val.to_lowercase());
-        let mut used_index = 0;
-        let mut used = false;
-        for (index, value) in result_dis.iter().enumerate() {
-            if lev < *value {
-               result.insert(index, val.to_string());
-               used_index = index;
-               used = true;
-               break;
-            }
-        }
-        if used == false {
-            result.push(val.to_string());
-            result_dis.push(lev);
-        } else {
-            result_dis.insert(used_index, lev);
-        }
-    }
-    return result;
-}
 
 fn start_record_note() {
     // Check if file exists, if not create it
@@ -137,9 +86,9 @@ fn start_record_note() {
 
                     // Mostrar el buffer debajo
                     if selected_project.is_none() {
-                        selector = order_vector(&input_buffer, &file_names);
+                        selector = utils::order_vector(&input_buffer, &file_names);
                     } else {
-                        selector = order_vector(&input_buffer, &project_tasks);
+                        selector = utils::order_vector(&input_buffer, &project_tasks);
                     }
                     print!("{:?}", selector);
 
@@ -254,7 +203,7 @@ fn start_record_note() {
                         print!("> {}\r\n", input_buffer);
 
                         // Mostrar el buffer debajo
-                        print!("{:?}", order_vector(&input_buffer, &file_names));
+                        print!("{:?}", utils::order_vector(&input_buffer, &file_names));
 
                         // Volver al final de la línea de entrada
                         execute!(
