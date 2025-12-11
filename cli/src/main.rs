@@ -20,7 +20,7 @@ fn get_filename_path() -> PathBuf {
     let now = Local::now();
     let week = now.iso_week().week();
     let year = now.year();
-    let folder_path = format!("./Semanas anteriores/W{} {}", week, year);
+    let folder_path = format!("./data/Semanas anteriores/W{} {}", week, year);
     fs::create_dir_all(&folder_path).expect("Failed to create directory");
     let filename = format!("{}/{}.txt", folder_path, now.format("%d-%m-%Y"));
     PathBuf::from(filename)
