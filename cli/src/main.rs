@@ -3,7 +3,7 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::io::{self, Write};
-use std::path::Path;
+use std::path::PathBuf;
 use chrono::prelude::*;
 use regex::Regex;
 use crossterm::{
@@ -14,13 +14,23 @@ use crossterm::{
 };
 use core::{utils};
 
-const SEMANA_ACTUAL_PATH: &str = "./data/Esta semana";
 const PROYECTOS_PATH: &str = "./data/Proyectos";
+
+fn get_filename_path() -> PathBuf {
+    let now = Local::now();
+    let week = now.iso_week().week();
+    let year = now.year();
+    let folder_path = format!("./data/Semanas anteriores/W{} {}", week, year);
+    fs::create_dir_all(&folder_path).expect("Failed to create directory");
+    let filename = format!("{}/{}.txt", folder_path, now.format("%d-%m-%Y"));
+    PathBuf::from(filename)
+}
 
 fn start_record_note() {
     // Check if file exists, if not create it
-    let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
-    let filename_path = Path::new(&filename);
+    let filename_path_buf = get_filename_path();
+    let filename_path = filename_path_buf.as_path();
+
     if !filename_path.exists() {
         println!("File does not exist, creating it...");
         if let Err(e) = fs::write(filename_path, "") {
@@ -156,6 +166,11 @@ fn start_record_note() {
                     print!("\r\n");
 
                     if selected_project.is_none() {
+                        // Ensure PROYECTOS_PATH exists
+                        if let Err(e) = fs::create_dir_all(PROYECTOS_PATH) {
+                            eprintln!("Failed to create projects directory: {}", e);
+                        }
+
                         let project_name = input_buffer.trim().to_string() + ".txt";
                         let project_path = PROYECTOS_PATH.to_string() + "/" + &project_name;
                         match OpenOptions::new()
@@ -252,8 +267,8 @@ fn start_record_note() {
 }
 
 fn end_record_note() {
-    let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
-    let filename_path = Path::new(&filename);
+    let filename_path_buf = get_filename_path();
+    let filename_path = filename_path_buf.as_path();
     // Activar modo raw
     enable_raw_mode().unwrap();
 
@@ -375,8 +390,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args[1].as_str() {
         _=>{
-            let filename = format!("{}/{}.txt", SEMANA_ACTUAL_PATH, Local::now().format("%d-%m-%Y"));
-            let filename_path = Path::new(&filename);
+            let filename_path_buf = get_filename_path();
+            let filename_path = filename_path_buf.as_path();
             if !filename_path.exists() || fs::metadata(filename_path)?.len() == 0 {
                 start_record_note();
             } else {
