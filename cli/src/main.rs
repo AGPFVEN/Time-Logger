@@ -166,6 +166,11 @@ fn start_record_note() {
                     print!("\r\n");
 
                     if selected_project.is_none() {
+                        // Ensure PROYECTOS_PATH exists
+                        if let Err(e) = fs::create_dir_all(PROYECTOS_PATH) {
+                            eprintln!("Failed to create projects directory: {}", e);
+                        }
+
                         let project_name = input_buffer.trim().to_string() + ".txt";
                         let project_path = PROYECTOS_PATH.to_string() + "/" + &project_name;
                         match OpenOptions::new()
