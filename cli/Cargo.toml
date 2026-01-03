@@ -8,3 +8,7 @@ core = { path = "../core" }
 chrono = "0.4.42"
 crossterm = "0.28"
 regex = "1.12.2"
+anyhow = "1.0"
+
+[dev-dependencies]
+rexpect = "0.6.2"

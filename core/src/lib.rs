@@ -1,4 +1,5 @@
 pub mod utils;
+pub mod data_managing;
 
 //#[cfg(test)]
 //mod tests {

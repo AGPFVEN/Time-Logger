@@ -3,7 +3,6 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::io::{self, Write};
-use std::path::PathBuf;
 use chrono::prelude::*;
 use regex::Regex;
 use crossterm::{
@@ -12,67 +11,25 @@ use crossterm::{
     cursor,
     execute,
 };
-use core::{utils};
-
-const PROYECTOS_PATH: &str = "./data/Proyectos";
-
-fn get_filename_path() -> PathBuf {
-    let now = Local::now();
-    let week = now.iso_week().week();
-    let year = now.year();
-    let folder_path = format!("./data/Semanas anteriores/W{} {}", week, year);
-    fs::create_dir_all(&folder_path).expect("Failed to create directory");
-    let filename = format!("{}/{}.txt", folder_path, now.format("%d-%m-%Y"));
-    PathBuf::from(filename)
-}
+use core::{utils, data_managing::text_storage};
 
 fn start_record_note() {
-    // Check if file exists, if not create it
-    let filename_path_buf = get_filename_path();
-    let filename_path = filename_path_buf.as_path();
-
-    if !filename_path.exists() {
-        println!("File does not exist, creating it...");
-        if let Err(e) = fs::write(filename_path, "") {
-            println!("Error creating file: {}", e);
-        } else {
-            println!("File created sucessfully");
-        }
-    }
+    // Confirms that needed files exists
+    text_storage::init();
 
     // Get list of proyects
-    let mut file_names: Vec<String> = Vec::new();
-    match fs::read_dir(PROYECTOS_PATH){
-        Ok(entries) => {
-            file_names = entries
-                .filter_map(|entry| {
-                        entry.ok()
-                            .and_then(|e| e.file_name().into_string().ok())
-                    })
-                .collect();
-        }
-        Err(e) => {
-            eprintln!("Error reading directory: {}", e);
-        }
-    }
+    let projects: Vec<String> = text_storage::get_projects(); 
 
-    // Empezar programa para hacer una línea
-    println!("Escribe '/q' para salir del programa");
-    println!("Modo raw activado - lee carácter por carácter\r");
-
-    let mut selected_project: Option<File> = None;
-    let mut selected_project_name: Option<String> = None;
-    let mut selected_task: Option<String> = None;
+    // Needed variables
+    let mut selected_project: String = "".to_string();
     let mut project_tasks: Vec<String> = Vec::new();
     let mut selector: Vec<String>;
     let re = Regex::new(r"\\([0-9])$").unwrap();
+    let mut input_buffer = String::new();
 
     // Activar modo raw
     enable_raw_mode().unwrap();
-
-    let mut input_buffer = String::new();
-
-    print!("> ");
+    print!(">");
     io::stdout().flush().unwrap();
 
     loop {
@@ -85,18 +42,18 @@ fn start_record_note() {
                     input_buffer.push(c);
 
                     // Redibujar todo
-                    execute!(
+                    let _ = execute!(
                         io::stdout(),
                         cursor::MoveTo(0, cursor::position().unwrap().1),
                         Clear(ClearType::FromCursorDown)
-                    ).unwrap();
+                    );
 
                     // Mostrar la línea de entrada
-                    print!("> {}\r\n", input_buffer);
+                    print!(">{}\r\n", input_buffer);
 
                     // Mostrar el buffer debajo
-                    if selected_project.is_none() {
-                        selector = utils::order_vector(&input_buffer, &file_names);
+                    if selected_project.is_empty() {
+                        selector = utils::order_vector(&input_buffer, &projects);
                     } else {
                         selector = utils::order_vector(&input_buffer, &project_tasks);
                     }
@@ -109,47 +66,26 @@ fn start_record_note() {
                     ).unwrap();
                     io::stdout().flush().unwrap();
 
-                    // Verificar si el buffer termina con "/q"
-                    if input_buffer.ends_with("\\q") {
-                        print!("\r\n\r\n");
-                        println!("Saliendo del programa...\r");
-                        break;
-                    }
-
-                    // Verificar si el buffer termina con "/q"
+                    // Verificar si el buffer termina con "/num"
                     if let Some(caps) = re.captures(&input_buffer) {
                         let number = &caps[1].parse::<usize>().unwrap();  // This is "5"
                         //TODO: Quitar los .txt del search
-                        //let project_path = format!("{}/{}.txt", PROYECTOS_PATH, &file_names[*number]);
-                        let project_path = format!("{}/{}", PROYECTOS_PATH, &selector[*number]);
 
                         // Read project file and populate project_tasks
-                        if selected_project.is_none() {
-                            match fs::read_to_string(&project_path) {
-                                Ok(content) => {
-                                    project_tasks = content.lines()
-                                        .map(|line| line.to_string())
-                                        .collect();
-                                },
-                                Err(e) => eprintln!("Failed to read project file: {}", e)
+                        if selected_project.is_empty() {
+                            //let project_path = format!("{}/{}.txt", text_storage::PROYECTOS_PATH, &file_names[*number]);
+                            selected_project = selector[*number].to_string();
+                            match text_storage::get_tasks_from_project(&selector[*number]) {
+                                Ok(returned_tasks) => project_tasks = returned_tasks,
+                                Err(e) => eprintln!("Failed to create project: {}", e)
                             }
-
-                            // Open the file for writing (append mode)
-                            //TODO: No crear una referencia
-                            match OpenOptions::new()
-                                .write(true)
-                                .append(true)
-                                .open(&project_path) {
-                                Ok(file) => {
-                                    selected_project = Some(file);
-                                    selected_project_name = Some(selector[*number].to_string());
-                                },
-                                Err(e) => eprintln!("Failed to open file: {}", e)
-                            }
-
                             input_buffer.clear();
-                        } else if selected_task.is_none() {
-                            selected_task = Some(selector[*number].to_string());
+                        } else {
+                            match text_storage::start_timer_on_task(&selected_project, &selector[*number]) {
+                                Ok(()) => break,
+                                Err(e) => eprintln!("Failed to create project: {}", e)
+                            }
+                            break;
                         }
                     }
                 }
@@ -164,38 +100,21 @@ fn start_record_note() {
 
                     // Procesar la línea completa
                     print!("\r\n");
+                    let user_input = input_buffer.trim().to_string();
 
-                    if selected_project.is_none() {
-                        // Ensure PROYECTOS_PATH exists
-                        if let Err(e) = fs::create_dir_all(PROYECTOS_PATH) {
-                            eprintln!("Failed to create projects directory: {}", e);
-                        }
-
-                        let project_name = input_buffer.trim().to_string() + ".txt";
-                        let project_path = PROYECTOS_PATH.to_string() + "/" + &project_name;
-                        match OpenOptions::new()
-                            .write(true)
-                            .append(true)
-                            .create(true)
-                            .open(&project_path) {
-                            Ok(file) => {
-                                selected_project = Some(file);
-                                selected_project_name = Some(project_name);
-                            },
-                            Err(e) => eprintln!("Failed to create file: {}", e)
+                    if selected_project.is_empty() {
+                        // Ensure text_storage::PROYECTOS_PATH exists
+                        match text_storage::create_project(&user_input) {
+                            Ok(returned_project) => selected_project = returned_project,
+                            Err(e) => eprintln!("Failed to create project: {}", e)
                         }
                         //TODO: testear este caso
-                    } else if selected_task.is_none() {
-                        let task_to_save = input_buffer.trim();
-                        project_tasks.push(task_to_save.to_string());
-
-                        if let Some(ref mut file) = selected_project {
-                            if let Err(e) = writeln!(file, "{}", task_to_save) {
-                                eprintln!("Error writing to file: {}", e);
-                            }
+                    } else {
+                        text_storage::create_task(&selected_project, &user_input);
+                        match text_storage::start_timer_on_task(&selected_project, &input_buffer.trim().to_string()) {
+                            Ok(()) => break,
+                            Err(e) => eprintln!("Failed to create project: {}", e)
                         }
-
-                        selected_task = Some(task_to_save.to_string());
                     }
 
                     input_buffer.clear();
@@ -218,7 +137,7 @@ fn start_record_note() {
                         print!("> {}\r\n", input_buffer);
 
                         // Mostrar el buffer debajo
-                        print!("{:?}", utils::order_vector(&input_buffer, &file_names));
+                        print!("{:?}", utils::order_vector(&input_buffer, &projects));
 
                         // Volver al final de la línea de entrada
                         execute!(
@@ -228,35 +147,13 @@ fn start_record_note() {
                         io::stdout().flush().unwrap();
                     }
                 }
+                //TODO: Añadir signals para que hagan cosas (crtl+c, etc)
                 KeyCode::Esc => {
                     print!("\r\n\r\n");
                     println!("Saliendo del programa...\r");
                     break;
                 }
                 _ => {}
-            }
-
-            if !selected_task.is_none() {
-                match OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .create(true)
-                    .open(&filename_path) {
-                        Ok(mut file) => {
-                            if let Err(e) = write!(file, "{} {}_{} (",
-                                Local::now().format("%H:%M"),
-                                selected_project_name.as_ref().unwrap().replace(" ", "-").replace(".txt", ""),
-                                selected_task.as_ref().unwrap().replace(" ", "-")
-                            ) {
-                                eprintln!("Error writing to file: {}", e);
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("Error writing to file: {}", e);
-                        }
-                        
-                    }
-                break;
             }
         }
     }
@@ -267,7 +164,7 @@ fn start_record_note() {
 }
 
 fn end_record_note() {
-    let filename_path_buf = get_filename_path();
+    let filename_path_buf = text_storage::get_filename();
     let filename_path = filename_path_buf.as_path();
     // Activar modo raw
     enable_raw_mode().unwrap();
@@ -390,7 +287,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args[1].as_str() {
         _=>{
-            let filename_path_buf = get_filename_path();
+            let filename_path_buf = text_storage::get_filename();
             let filename_path = filename_path_buf.as_path();
             if !filename_path.exists() || fs::metadata(filename_path)?.len() == 0 {
                 start_record_note();
