@@ -1,8 +1,8 @@
-use std::env;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Read;
 use std::io::{self, Write};
+use std::path::PathBuf;
 use chrono::prelude::*;
 use regex::Regex;
 use crossterm::{
@@ -12,13 +12,23 @@ use crossterm::{
     execute,
 };
 use core::{utils, data_managing::text_storage};
+use clap::Parser;
 
-fn start_record_note() {
+// automatiza --help y --version
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Name of the person to greet
+    #[arg(short, long, default_value = "./data")]
+    config_path: std::path::PathBuf,
+}
+
+fn start_record_note(args: Args) {
     // Confirms that needed files exists
-    text_storage::init();
+    text_storage::init(&args.config_path);
 
     // Get list of proyects
-    let projects: Vec<String> = text_storage::get_projects(); 
+    let projects: Vec<String> = text_storage::get_projects(&args.config_path); 
 
     // Needed variables
     let mut selected_project: String = "".to_string();
@@ -75,13 +85,16 @@ fn start_record_note() {
                         if selected_project.is_empty() {
                             //let project_path = format!("{}/{}.txt", text_storage::PROYECTOS_PATH, &file_names[*number]);
                             selected_project = selector[*number].to_string();
-                            match text_storage::get_tasks_from_project(&selector[*number]) {
+                            match text_storage::get_tasks_from_project(
+                                &args.config_path,
+                                &selector[*number]
+                            ) {
                                 Ok(returned_tasks) => project_tasks = returned_tasks,
                                 Err(e) => eprintln!("Failed to create project: {}", e)
                             }
                             input_buffer.clear();
                         } else {
-                            match text_storage::start_timer_on_task(&selected_project, &selector[*number]) {
+                            match text_storage::start_timer_on_task(&args.config_path, &selected_project, &selector[*number]) {
                                 Ok(()) => break,
                                 Err(e) => eprintln!("Failed to create project: {}", e)
                             }
@@ -104,14 +117,14 @@ fn start_record_note() {
 
                     if selected_project.is_empty() {
                         // Ensure text_storage::PROYECTOS_PATH exists
-                        match text_storage::create_project(&user_input) {
+                        match text_storage::create_project(&args.config_path,&user_input) {
                             Ok(returned_project) => selected_project = returned_project,
                             Err(e) => eprintln!("Failed to create project: {}", e)
                         }
                         //TODO: testear este caso
                     } else {
                         text_storage::create_task(&selected_project, &user_input);
-                        match text_storage::start_timer_on_task(&selected_project, &input_buffer.trim().to_string()) {
+                        match text_storage::start_timer_on_task(&args.config_path, &selected_project, &input_buffer.trim().to_string()) {
                             Ok(()) => break,
                             Err(e) => eprintln!("Failed to create project: {}", e)
                         }
@@ -163,8 +176,8 @@ fn start_record_note() {
 
 }
 
-fn end_record_note() {
-    let filename_path_buf = text_storage::get_filename();
+fn end_record_note(args: Args) {
+    let filename_path_buf = text_storage::get_todays_filename(&args.config_path);
     let filename_path = filename_path_buf.as_path();
     // Activar modo raw
     enable_raw_mode().unwrap();
@@ -278,43 +291,38 @@ fn end_record_note() {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut args: Vec<String> = env::args().collect();
+    // Get all arguments
+    let args = Args::parse();
 
-    if args.len() < 2 {
-        println!("No argument passed to program, it will execute add line to todays file");
-        args.push("-a".to_string());
-    }
+    // Construct todays filename
+    let todays_file_path: PathBuf = PathBuf::from(&args.config_path)
+        .join(text_storage::get_todays_filename(&args.config_path));
 
-    match args[1].as_str() {
-        _=>{
-            let filename_path_buf = text_storage::get_filename();
-            let filename_path = filename_path_buf.as_path();
-            if !filename_path.exists() || fs::metadata(filename_path)?.len() == 0 {
-                start_record_note();
-            } else {
-                match File::open(filename_path) {
-                    Ok(mut file) => {
-                        use std::io::Seek;
-                        use std::io::SeekFrom;
+    // If todays file exists, is empty or complete start a new entry, else end the current note
+    if !todays_file_path.exists() || fs::metadata(&todays_file_path)?.len() == 0 {
+        start_record_note(args);
+    } else {
+        match File::open(&todays_file_path) {
+            Ok(mut file) => {
+                use std::io::Seek;
+                use std::io::SeekFrom;
 
-                        // Seek to 2 bytes before the end
-                        file.seek(SeekFrom::End(-1))?;
+                // Seek to 2 bytes before the end
+                file.seek(SeekFrom::End(-1))?;
     
-                        // Read the last 2 bytes
-                        let mut buffer = vec![0u8; 1];
-                        file.read_exact(&mut buffer)?;
+                // Read the last 2 bytes
+                let mut buffer = vec![0u8; 1];
+                file.read_exact(&mut buffer)?;
     
-                        println!("Byte 0: {} -> char: '{}'", buffer[0], buffer[0] as char);
-                        if buffer[0] == 10 {
-                            start_record_note();
-                        } else {
-                            end_record_note();
-                        }
-                    },
-                    Err(e) => eprintln!("Failed to open file: {}", e)
+                println!("Byte 0: {} -> char: '{}'", buffer[0], buffer[0] as char);
+                if buffer[0] == 10 {
+                    start_record_note(args);
+                } else {
+                    end_record_note(args);
                 }
-            }
+            },
+            Err(e) => eprintln!("Failed to open file: {}", e)
         }
     }
-    Ok(())
+    std::process::exit(0);
 }
