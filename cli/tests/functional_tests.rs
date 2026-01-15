@@ -31,6 +31,44 @@ fn open_close() -> Result<()> {
         Err(anyhow::anyhow!("Required folders not found"))
     }
 }
+
+#[test]
+fn open_simple_start() -> Result<()> {
+    // Create the isolated temporary directory
+    let temp_dir = tempdir()?;
+    let temp_path = temp_dir.path();
+
+    // Binary path
+    let bin_path = "../target/debug/cli";
+
+    // Construct the command
+    let cmd = format!("{} --config-path \"{}\"", bin_path, temp_path.display());
+
+    // Spawn the process with the new command string
+    let mut p = spawn(&cmd, Some(10_000))?;
+    thread::sleep(time::Duration::from_millis(200));
+    p.send("Proyecto testing")?;
+    p.send("\r")?;
+    p.flush()?;
+    thread::sleep(time::Duration::from_millis(200));
+    p.send("Task testing")?;
+    p.send("\r")?;
+    p.flush()?;
+    thread::sleep(time::Duration::from_millis(200));
+    p.exp_string("Archivo creado exitosamente.")?;
+
+    // Check if the required folders exist
+    if temp_path.join("Projects").exists()
+    && temp_path.join("Weeks").exists() {
+        if temp_path.join("Projects").join("Proyecto testing.txt").exists() {
+            return Ok(());
+        } else {
+            Err(anyhow::anyhow!("Required file not found"))
+        }
+    } else {
+        Err(anyhow::anyhow!("Required folders not found"))
+    }
+}
 /* Un test jodido con p.exp_string() y p.send()
 #[test]
 fn test_flujo_interactivo() -> Result<()> {

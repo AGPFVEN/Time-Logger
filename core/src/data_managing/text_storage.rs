@@ -11,7 +11,7 @@ pub const PROYECTS_PATH: &str = "Projects";
 
 pub fn init(data_path: &PathBuf) -> PathBuf {
     // Check if todays file exists, if not create it
-    let filename_path = data_path.join(get_todays_filename(data_path));
+    let filename_path = get_todays_filename(data_path);
     if !filename_path.exists() {
         println!("Todays file does not exist, creating it...");
         if let Err(e) = fs::write(&filename_path, "") {
@@ -23,11 +23,11 @@ pub fn init(data_path: &PathBuf) -> PathBuf {
     return filename_path;
 }
 
-fn construct_project_path(project_name: &str) -> PathBuf {
+fn construct_project_path(data_path: &PathBuf, project_name: &str) -> PathBuf {
     if project_name.ends_with(".txt") {
-        return PathBuf::from(format!("{}/{}", PROYECTS_PATH, project_name))
+        return data_path.join(PROYECTS_PATH).join(project_name);
     } else {
-        return PathBuf::from(format!("{}/{}.txt", PROYECTS_PATH, project_name))
+        return PathBuf::from(format!("{}/{}.txt", data_path.join(PROYECTS_PATH).display(), project_name))
     }
 }
 
@@ -105,7 +105,7 @@ pub fn create_project(data_path: &PathBuf, project_name: &str) -> Result<String>
     let resultado = OpenOptions::new()
         .write(true)
         .create_new(true) // Esta es la clave
-        .open(construct_project_path(project_name));
+        .open(construct_project_path(data_path, project_name));
     match resultado {
         Ok(_) => {
             println!("Archivo creado exitosamente.");
@@ -118,11 +118,11 @@ pub fn create_project(data_path: &PathBuf, project_name: &str) -> Result<String>
     }
 }
 
-pub fn create_task(project_name: &str, task_name: &str) {
+pub fn create_task(data_path: &PathBuf, project_name: &str, task_name: &str) {
     let resultado = OpenOptions::new()
         .write(true)
         .append(true)
-        .open(construct_project_path(project_name));
+        .open(construct_project_path(data_path, project_name));
     match resultado {
         Ok(mut file) => {
             if let Err(e) = writeln!(file, "{}", task_name) {

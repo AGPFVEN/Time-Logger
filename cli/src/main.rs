@@ -28,7 +28,7 @@ fn start_record_note(args: Args) {
     text_storage::init(&args.config_path);
 
     // Get list of proyects
-    let projects: Vec<String> = text_storage::get_projects(&args.config_path); 
+    let projects: Vec<String> = text_storage::get_projects(&args.config_path);
 
     // Needed variables
     let mut selected_project: String = "".to_string();
@@ -123,7 +123,7 @@ fn start_record_note(args: Args) {
                         }
                         //TODO: testear este caso
                     } else {
-                        text_storage::create_task(&selected_project, &user_input);
+                        text_storage::create_task(&args.config_path, &selected_project, &user_input);
                         match text_storage::start_timer_on_task(&args.config_path, &selected_project, &input_buffer.trim().to_string()) {
                             Ok(()) => break,
                             Err(e) => eprintln!("Failed to create project: {}", e)
@@ -295,8 +295,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     // Construct todays filename
-    let todays_file_path: PathBuf = PathBuf::from(&args.config_path)
-        .join(text_storage::get_todays_filename(&args.config_path));
+    let todays_file_path: PathBuf = text_storage::get_todays_filename(&args.config_path);
 
     // If todays file exists, is empty or complete start a new entry, else end the current note
     if !todays_file_path.exists() || fs::metadata(&todays_file_path)?.len() == 0 {
@@ -309,12 +308,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 // Seek to 2 bytes before the end
                 file.seek(SeekFrom::End(-1))?;
-    
+
                 // Read the last 2 bytes
                 let mut buffer = vec![0u8; 1];
                 file.read_exact(&mut buffer)?;
-    
-                println!("Byte 0: {} -> char: '{}'", buffer[0], buffer[0] as char);
+
                 if buffer[0] == 10 {
                     start_record_note(args);
                 } else {
