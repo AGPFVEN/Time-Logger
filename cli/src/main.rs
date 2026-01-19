@@ -4,6 +4,7 @@ use std::io::Read;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use chrono::prelude::*;
+use crossterm::style::{Print};
 use regex::Regex;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent},
@@ -33,9 +34,10 @@ fn start_record_note(args: Args) {
     // Needed variables
     let mut selected_project: String = "".to_string();
     let mut project_tasks: Vec<String> = Vec::new();
-    let mut selector: Vec<String>;
+    let mut selector: Vec<String> = Vec::new();
     let re = Regex::new(r"\\([0-9])$").unwrap();
     let mut input_buffer = String::new();
+    let mut tab_selector : Option<usize> = None;
 
     // Activar modo raw
     enable_raw_mode().unwrap();
@@ -47,6 +49,7 @@ fn start_record_note(args: Args) {
         if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
             match code {
                 KeyCode::Char(c) => {
+                    tab_selector = None;
                     //TODO: Meter un prompt de qué proyecto está el usuario
                     // Agregar carácter al buffer
                     input_buffer.push(c);
@@ -116,25 +119,51 @@ fn start_record_note(args: Args) {
                     let user_input = input_buffer.trim().to_string();
 
                     if selected_project.is_empty() {
-                        // Ensure text_storage::PROYECTOS_PATH exists
-                        match text_storage::create_project(&args.config_path,&user_input) {
-                            Ok(returned_project) => selected_project = returned_project,
-                            Err(e) => eprintln!("Failed to create project: {}", e)
+                        if tab_selector.is_none() {
+                            // Ensure text_storage::PROYECTOS_PATH exists
+                            match text_storage::create_project(&args.config_path,&user_input) {
+                                Ok(returned_project) => selected_project = returned_project,
+                                Err(e) => eprintln!("Failed to create project: {}", e)
+                            }
+                        } else {
+                            selected_project = selector[tab_selector.unwrap()].to_string();
+                            match text_storage::get_tasks_from_project(
+                                &args.config_path,
+                                &selected_project
+                            ) {
+                                Ok(returned_tasks) => project_tasks = returned_tasks,
+                                Err(e) => eprintln!("Failed to create project: {}", e)
+                            }
+                            print!("{:?}", project_tasks);
+                            
                         }
                         //TODO: testear este caso
                     } else {
-                        text_storage::create_task(&args.config_path, &selected_project, &user_input);
-                        match text_storage::start_timer_on_task(&args.config_path, &selected_project, &input_buffer.trim().to_string()) {
-                            Ok(()) => break,
-                            Err(e) => eprintln!("Failed to create project: {}", e)
+                        if tab_selector.is_none() {
+                            text_storage::create_task(&args.config_path, &selected_project, &user_input);
+                            match text_storage::start_timer_on_task(&args.config_path, &selected_project, &input_buffer.trim().to_string()) {
+                                Ok(()) => break,
+                                Err(e) => eprintln!("Failed to start timer on new task: {}", e)
+                            }
+                        } else {
+                            match text_storage::start_timer_on_task(
+                                &args.config_path,
+                                &selected_project,
+                                &selector[tab_selector.unwrap()].to_string())
+                                {
+                                Ok(()) => break,
+                                Err(e) => eprintln!("Failed to start timer on existing task: {}", e)
+                            }
                         }
                     }
 
+                    print!("\r");
                     input_buffer.clear();
                     print!("> ");
                     io::stdout().flush().unwrap();
                 }
                 KeyCode::Backspace => {
+                    tab_selector = None;
                     // Borrar último carácter
                     if !input_buffer.is_empty() {
                         input_buffer.pop();
@@ -159,6 +188,59 @@ fn start_record_note(args: Args) {
                         ).unwrap();
                         io::stdout().flush().unwrap();
                     }
+                }
+                KeyCode::Tab => {
+                    // Redibujar todo
+                    let _ = execute!(
+                        io::stdout(),
+                        cursor::MoveTo(0, cursor::position().unwrap().1),
+                        Clear(ClearType::FromCursorDown)
+                    );
+
+                    // Mostrar la línea de entrada
+                    print!(">{}\r\n", input_buffer);
+
+                    // Mostrar el buffer debajo
+                    if selected_project.is_empty() {
+                        selector = utils::order_vector(&input_buffer, &projects);
+                    } else {
+                        selector = utils::order_vector(&input_buffer, &project_tasks);
+                    }
+                    if tab_selector == None {
+                        tab_selector = Some(0);
+                    } else {
+                        if tab_selector.unwrap() >= selector.len() -1 {
+                            tab_selector = Some(0);
+                        } else {
+                            tab_selector = Some(tab_selector.unwrap() + 1);
+                        }
+                    }
+
+                    // Assuming selector is something like a Vec<String> or Vec<&str>
+                    for (i, item) in selector.iter().enumerate() {
+                        if Some(i) == tab_selector {
+                            // Highlighted item
+                            let _ = execute!(
+                                io::stdout(),
+                                crossterm::style::SetAttribute(crossterm::style::Attribute::Reverse),
+                                Print(item),
+                                crossterm::style::SetAttribute(crossterm::style::Attribute::NoReverse),
+                            );
+                        } else {
+                            // Normal item
+                            print!("{}", item);
+                        }
+                        if i != selector.len() - 1 {
+                            print!(", ");
+                        }
+                    }
+
+                    // Volver al final de la línea de entrada
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+                    ).unwrap();
+                    io::stdout().flush().unwrap();
                 }
                 //TODO: Añadir signals para que hagan cosas (crtl+c, etc)
                 KeyCode::Esc => {
