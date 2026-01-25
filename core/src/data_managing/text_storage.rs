@@ -36,7 +36,7 @@ pub fn get_todays_filename(data_path: &PathBuf) -> PathBuf {
     let now = Local::now();
     let week = now.iso_week().week();
     let year = now.year();
-    let folder_path = format!("{}/{} W{}", data_path.join(WEEKS_PATH).display(), year, week);
+    let folder_path = format!("{}/{} W{:02}", data_path.join(WEEKS_PATH).display(), year, week);
     fs::create_dir_all(&folder_path).expect("Failed to create directory");
     let filename = format!("{}/{}.txt", folder_path, now.format("%d-%m-%Y"));
     PathBuf::from(filename)
