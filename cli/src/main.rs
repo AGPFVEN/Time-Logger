@@ -41,7 +41,13 @@ fn start_record_note(args: Args) {
 
     // Activar modo raw
     enable_raw_mode().unwrap();
-    print!(">");
+    print!(">\r\n");
+    print!("{:?}", projects);
+    // Volver al final de la línea de entrada
+    execute!(
+        io::stdout(),
+        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+    ).unwrap();
     io::stdout().flush().unwrap();
 
     loop {
@@ -157,9 +163,8 @@ fn start_record_note(args: Args) {
                         }
                     }
 
-                    print!("\r");
+                    print!("\r\n");
                     input_buffer.clear();
-                    print!("> ");
                     io::stdout().flush().unwrap();
                 }
                 KeyCode::Backspace => {
@@ -214,6 +219,55 @@ fn start_record_note(args: Args) {
                         } else {
                             tab_selector = Some(tab_selector.unwrap() + 1);
                         }
+                    }
+
+                    // Assuming selector is something like a Vec<String> or Vec<&str>
+                    for (i, item) in selector.iter().enumerate() {
+                        if Some(i) == tab_selector {
+                            // Highlighted item
+                            let _ = execute!(
+                                io::stdout(),
+                                crossterm::style::SetAttribute(crossterm::style::Attribute::Reverse),
+                                Print(item),
+                                crossterm::style::SetAttribute(crossterm::style::Attribute::NoReverse),
+                            );
+                        } else {
+                            // Normal item
+                            print!("{}", item);
+                        }
+                        if i != selector.len() - 1 {
+                            print!(", ");
+                        }
+                    }
+
+                    // Volver al final de la línea de entrada
+                    execute!(
+                        io::stdout(),
+                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+                    ).unwrap();
+                    io::stdout().flush().unwrap();
+                }
+                KeyCode::BackTab => {
+                    // Redibujar todo
+                    let _ = execute!(
+                        io::stdout(),
+                        cursor::MoveTo(0, cursor::position().unwrap().1),
+                        Clear(ClearType::FromCursorDown)
+                    );
+
+                    // Mostrar la línea de entrada
+                    print!(">{}\r\n", input_buffer);
+
+                    // Mostrar el buffer debajo
+                    if selected_project.is_empty() {
+                        selector = utils::order_vector(&input_buffer, &projects);
+                    } else {
+                        selector = utils::order_vector(&input_buffer, &project_tasks);
+                    }
+                    if tab_selector == None || tab_selector.unwrap() == 0 {
+                        tab_selector = Some(selector.len() -1);
+                    } else {
+                        tab_selector = Some(tab_selector.unwrap() - 1);
                     }
 
                     // Assuming selector is something like a Vec<String> or Vec<&str>
