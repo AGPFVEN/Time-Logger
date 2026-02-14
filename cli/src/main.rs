@@ -41,12 +41,14 @@ fn start_record_note(args: Args) {
 
     // Activar modo raw
     enable_raw_mode().unwrap();
-    print!(">\r\n");
-    print!("{:?}", projects);
+    print!("> ");
+    io::stdout().flush().unwrap();
+    execute!(io::stdout(), cursor::SavePosition).unwrap();
+    print!("\r\n{:?}", projects);
     // Volver al final de la línea de entrada
     execute!(
         io::stdout(),
-        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
+        cursor::RestorePosition
     ).unwrap();
     io::stdout().flush().unwrap();
 
@@ -63,12 +65,14 @@ fn start_record_note(args: Args) {
                     // Redibujar todo
                     let _ = execute!(
                         io::stdout(),
-                        cursor::MoveTo(0, cursor::position().unwrap().1),
-                        Clear(ClearType::FromCursorDown)
+                        //cursor::MoveTo(0, cursor::position().unwrap().1),
+                        cursor::MoveToColumn(0),
+                        Clear(ClearType::FromCursorDown),
+                        cursor::SavePosition
                     );
 
                     // Mostrar la línea de entrada
-                    print!(">{}\r\n", input_buffer);
+                    print!("> {}\r\n", input_buffer);
 
                     // Mostrar el buffer debajo
                     if selected_project.is_empty() {
@@ -298,12 +302,18 @@ fn start_record_note(args: Args) {
                 }
                 //TODO: Añadir signals para que hagan cosas (crtl+c, etc)
                 KeyCode::Esc => {
-                    print!("\r\n\r\n");
-                    println!("Saliendo del programa...\r");
+                    let _ = execute!( io::stdout(), 
+                        cursor::RestorePosition,
+                        Clear(ClearType::FromCursorDown),
+                    );
+                    let _ = io::stdout().flush();
+                    println!("> Saliendo del programa...\r");
                     break;
                 }
                 _ => {}
             }
+            let _ = execute!( io::stdout(), cursor::RestorePosition);
+            let _ = io::stdout().flush();
         }
     }
 
