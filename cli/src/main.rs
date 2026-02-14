@@ -188,7 +188,13 @@ fn start_record_note(args: Args) {
                         print!("> {}\r\n", input_buffer);
 
                         // Mostrar el buffer debajo
-                        print!("{:?}", utils::order_vector(&input_buffer, &projects));
+                        // TODO: esto se puede refactorizar porque se hace mucho
+                        if selected_project.is_empty() {
+                            selector = utils::order_vector(&input_buffer, &projects);
+                        } else {
+                            selector = utils::order_vector(&input_buffer, &project_tasks);
+                        }
+                        print!("{:?}", selector);
 
                         // Volver al final de la línea de entrada
                         execute!(
