@@ -1,0 +1,6 @@
+17:37 uc3m_Machine-Learning_T1_Práctica (Intro numpy) 18:31
+18:32 uc3m_Machine-Learning_T1_Práctica (Empezar con Pandas) 18:39
+18:50 uc3m_Machine-Learning_T1_Práctica (Empezar ejercicios de pandas) 21:13
+22:30 uc3m_Machine-Learning_T1_Práctica (Terminar ejercicio hecho mal porque falta enunciado) 22:41
+23:20 uc3m_Machine-Learning_T2_Práctica (Ver vídeo inútil) 23:28
+23:29 uc3m_Machine-Learning_T2_Práctica (Avanzar con la práctica de KNN pero quiero repasar porque fui en piloto automático) 23:59

@@ -1,0 +1,4 @@
+Prepráctica_Ejercicio 1
+T1_Teoría
+Ejercicio 1 guiado - Set up sin hardware
+Ejercicio 2 guiado - Temperatura y humedad

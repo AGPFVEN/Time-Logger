@@ -1,0 +1,8 @@
+Reorganizar código
+Diseñar como se harán los tests
+Hacer archivo config
+Arreglar
+Habilitar tab
+Hacer refresh de la misma línea y no muchos prints
+Hacer comandos para facilitar cálculo de tiempo
+Habilitar tab inverso

@@ -331,6 +331,8 @@ fn start_record_note(args: Args) {
 fn end_record_note(args: Args) {
     let filename_path_buf = text_storage::get_todays_filename(&args.config_path);
     let filename_path = filename_path_buf.as_path();
+    //let filename_path_buf = text_storage::get_todays_filename(&args.config_path);
+    //let filename_path = filename_path_buf.as_path();
     // Activar modo raw
     enable_raw_mode().unwrap();
 
@@ -397,6 +399,22 @@ fn end_record_note(args: Args) {
                             },
                             Err(e) => eprintln!("Failed to create file: {}", e)
                         }
+                        //match OpenOptions::new()
+                            //.append(true)
+                            //.create(true)
+                            //.open(&filename_path) {
+                            //Ok(mut file) => {
+                                //match writeln!(file,
+                                    //"{}) {}",
+                                    //input_buffer,
+                                    //Local::now().format("%H:%M")
+                                //){
+                                    //Ok(()) => {}
+                                    //Err(e) => eprintln!("Failed to write in file: {}", e)
+                                //}
+                            //},
+                            //Err(e) => eprintln!("Failed to create file: {}", e)
+                        //}
 
                     input_buffer.clear();
                     print!("> ");

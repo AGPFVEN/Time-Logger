@@ -1,0 +1,4 @@
+14:09 Proyectos-Personales-Time-Logger_Hacer-archivo-config (Añadiendo config path file) 14:51
+15:31 Proyectos-Personales-Time-Logger_Hacer-archivo-config (Terminar tests pero no terminado porque no sirve tanto (si voy a cambiar a bases de datos pronto) 18:50
+19:44 Proyectos-Personales-Time-Logger_Arreglar (Añadiendo operador de tab) 21:01
+22:47 leetcode_el-de-hoy (

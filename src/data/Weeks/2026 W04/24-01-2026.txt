@@ -1,0 +1,6 @@
+12:04 leetcode_2026-01-24 (Empezar problema, ya está casi resuelto) 12:52
+13:39 leetcode_2026-01-24 (Terminar una posible solución, no lo he probado en la web) 13:55
+14:35 leetcode_2026-01-24 (Probar solución) 14:40
+17:19 leetcode_2026-01-24 (Terminado) 18:41
+19:34 uc3m_Compiladores_T1_Teoría (Solo historia de los compiladores) 22:37
+23:18 uc3m_Compiladores_T1_Teoría (Terminar historia y resto de T1) 23:59
