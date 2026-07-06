@@ -1,6 +1,0 @@
-06:58 leetcode_curso-de-arrays (Configurar ejercicio de hoy) 07:02
-08:18 leetcode_curso-de-arrays (set up en ntt) 08:18
-08:22 leetcode_curso-de-arrays (Terminado) 08:41
-14:40 uc3m_Ciberseguridad_T1.1 (Leer lo de ayer) 14:54
-16:52 uc3m_Compiladores_Prácticas-semanales (Avanzar y entender lab) 17:39
-18:15 uc3m_Compiladores_Prácticas-semanales (Avanzar y entender lab) 18:25

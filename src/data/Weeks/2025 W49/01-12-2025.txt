@@ -1,3 +1,0 @@
-0:1 Arquitectura-de-Computadores_Meter-optimizaciones-de-tiempo (Crear forma de medir rendimiento y parametrizar tiempo base) 0:05
-08:03 Arquitectura-de-Computadores_Meter-optimizaciones-de-tiempo (Crear forma de medir rendimiento y parametrizar tiempo base) 8:43
-16:30 Arquitectura-de-Computadores_Meter-optimizaciones-de-tiempo (Crear forma de medir rendimiento y parametrizar tiempo base) 18:03

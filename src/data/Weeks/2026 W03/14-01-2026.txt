@@ -1,2 +1,0 @@
-07:44 Proyectos-Personales-Time-Logger_Diseñar-como-se-harán-los-tests (Hay que crear un archivo de configuración para el programa) 08:28
-19:55 Proyectos-Personales-Time-Logger_Hacer-archivo-config (Ver cómo implementarlo) 20:15

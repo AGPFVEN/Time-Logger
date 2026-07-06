@@ -1,6 +1,0 @@
-0:0 uc3m_Arquitectura-de-computadores_Examen-2025---1era-vez (Hacer un ejercicio de pipelines) 0:12
-17:11 Buscar-trabajo_Buscar-empresas-que-hagan-algo-que-me-gusta (Meterme en LinkedIn y publicar algunas candidaturas) 18:03
-18:03 uc3m_Compiladores_T1_Ejercicios (Ejercicio chiquito) 18:45
-20:33 uc3m_Sistemas-distribuidos_T1_Teoría (creo que 4 diapos) 21:33
-22:02 uc3m_Sistemas-distribuidos_T1_Teoría (4 diapos más) 22:46
-22:48 leetcode_curso-de-arrays (Ver y Hacer problema de arrays fácil con soluciones óptimas no tan fáciles) 23:59

@@ -1,6 +1,0 @@
-02:32 uc3m_Planificación_Ver-requisitos-de-cada-asignatura (Poner fechas en el calendario y hacer calculadora de semanas) 03:18
-03:30 uc3m_Planificación_Ver-requisitos-de-cada-asignatura (Terminar de ver requisitos de asignaturas y planear estrategia) 05:18
-05:36 uc3m_Compiladores_T1_Teoría (Leer un poco de T1) 05:51
-05:58 Mudanza_Limipiar-terraza (Quitar todas las cajas que quedaban fuera) 7:56
-10:28 uc3m_Compiladores_T1_Teoría (Leer un poco de T1) 11:01
-14:12 uc3m_Compiladores_T1_Teoría (Entender ejercicio 1) 14:26

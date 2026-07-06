@@ -1,2 +1,0 @@
-00:20 Proyectos-Personales-Time-Logger_Hacer-refresh-de-la-misma-línea-y-no-muchos-prints (Diagnosticar por qué pasa) 0:40
-20:23 Proyectos-Personales-Time-Logger_Hacer-comandos-para-facilitar-cálculo-de-tiempo (Hacer un comando para que cálcule lo que llevo hoy) 20:57

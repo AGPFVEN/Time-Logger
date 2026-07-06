@@ -1,3 +1,0 @@
-18:31 Proyectos-Personales-Time-Logger_Reorganizar-código (Readquirir contexto)
-Agente-AGPFVEN_Probando-jules (Probar jules) 19:53
-20:02 Proyectos-Personales-Time-Logger_Reorganizar-código (Recordar como hacer módulos de rust y hacer algunos) 21:35

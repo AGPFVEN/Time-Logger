@@ -1,6 +1,0 @@
-17:45 uc3m_Compiladores_T1_Teoría (Repasar apuntes y ver los nuevos de repaso) 18:48
-19:28 uc3m_Compiladores_T1_Teoría (Seguir con el repaso) 19:52
-20:00 uc3m_Compiladores_T1_Teoría (Terminando de entender repaso) 20:49
-22:45 uc3m_Compiladores_T1_Teoría (Terminar de hacer apuntes) 23:20
-23:20 uc3m_Ciberseguridad_T1 (Hacer preguntas de hoy) 23:51
-23:53 uc3m_Arquitectura-de-computadores_Examen-2025---1era-vez (Hacer un ejercicio de pipelines) 23:59
