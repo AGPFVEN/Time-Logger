@@ -1,35 +1,47 @@
-use std::fs;
-use std::fs::{File, OpenOptions};
-use std::io::Read;
-use std::io::{self, Write};
-use std::path::PathBuf;
-use chrono::prelude::*;
-use crossterm::style::{Print};
-use regex::Regex;
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent},
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-    cursor,
-    execute,
-};
-use core::{utils, data_managing::text_storage};
 use clap::Parser;
+use crossterm::{
+    cursor,
+    event::{self, Event, KeyCode, KeyEvent},
+    execute,
+    style::Print,
+    terminal::{Clear, ClearType, disable_raw_mode, enable_raw_mode},
+};
+use regex::Regex;
+use serde::Deserialize;
+use std::{
+    fs,
+    io::{self, ErrorKind, Write},
+    path::PathBuf,
+};
 
-// automatiza --help y --version
+use core::{
+    data_managing::{Storage, TimerState},
+    utils,
+};
+// Structure of config file
+#[derive(Deserialize, Debug)]
+struct ConfigPrincipal {
+    storage: StorageConfig,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+enum StorageConfig {
+    TxtFiles { storage_path: String },
+    Sqlite {},
+}
+
+// Flags
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
     /// Name of the person to greet
-    #[arg(short, long, default_value = "./data")]
+    #[arg(short, long, default_value = "./config.toml")]
     config_path: std::path::PathBuf,
 }
 
-fn start_record_note(args: Args) {
-    // Confirms that needed files exists
-    text_storage::init(&args.config_path);
-
-    // Get list of proyects
-    let projects: Vec<String> = text_storage::get_projects(&args.config_path);
+fn start_record_note(storage: Box<dyn Storage>) {
+    let projects: Vec<String> = storage.get_projects();
 
     // Needed variables
     let mut selected_project: String = "".to_string();
@@ -37,44 +49,39 @@ fn start_record_note(args: Args) {
     let mut selector: Vec<String> = Vec::new();
     let re = Regex::new(r"\\([0-9])$").unwrap();
     let mut input_buffer = String::new();
-    let mut tab_selector : Option<usize> = None;
+    let mut tab_selector: Option<usize> = None;
 
-    // Activar modo raw
+    // Activate raw mode
     enable_raw_mode().unwrap();
     print!("> ");
     io::stdout().flush().unwrap();
     execute!(io::stdout(), cursor::SavePosition).unwrap();
     print!("\r\n{:?}", projects);
-    // Volver al final de la línea de entrada
-    execute!(
-        io::stdout(),
-        cursor::RestorePosition
-    ).unwrap();
+    execute!(io::stdout(), cursor::RestorePosition).unwrap();
     io::stdout().flush().unwrap();
 
     loop {
-        // Leer evento del teclado
+        // Read keyboard event
         if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
             match code {
                 KeyCode::Char(c) => {
                     tab_selector = None;
-                    //TODO: Meter un prompt de qué proyecto está el usuario
-                    // Agregar carácter al buffer
+                    //TODO: Make user know which project and task he is on
+                    // Add character to buffer
                     input_buffer.push(c);
 
-                    // Redibujar todo
+                    // Redraw everything
                     let _ = execute!(
                         io::stdout(),
-                        //cursor::MoveTo(0, cursor::position().unwrap().1),
                         cursor::MoveToColumn(0),
                         Clear(ClearType::FromCursorDown),
                         cursor::SavePosition
                     );
 
-                    // Mostrar la línea de entrada
+                    // Show input line
                     print!("> {}\r\n", input_buffer);
 
-                    // Mostrar el buffer debajo
+                    // Show buffer below input
                     if selected_project.is_empty() {
                         selector = utils::order_vector(&input_buffer, &projects);
                     } else {
@@ -82,87 +89,87 @@ fn start_record_note(args: Args) {
                     }
                     print!("{:?}", selector);
 
-                    // Volver al final de la línea de entrada
+                    // Return to end of input line
                     execute!(
                         io::stdout(),
-                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
-                    ).unwrap();
+                        cursor::MoveTo(
+                            (2 + input_buffer.len()) as u16,
+                            cursor::position().unwrap().1 - 1
+                        )
+                    )
+                    .unwrap();
                     io::stdout().flush().unwrap();
 
-                    // Verificar si el buffer termina con "/num"
+                    // Check if user ends with number
                     if let Some(caps) = re.captures(&input_buffer) {
-                        let number = &caps[1].parse::<usize>().unwrap();  // This is "5"
-                        //TODO: Quitar los .txt del search
+                        let number = &caps[1].parse::<usize>().unwrap();
+                        //TODO: remove .txt from project titles
 
                         // Read project file and populate project_tasks
                         if selected_project.is_empty() {
-                            //let project_path = format!("{}/{}.txt", text_storage::PROYECTOS_PATH, &file_names[*number]);
                             selected_project = selector[*number].to_string();
-                            match text_storage::get_tasks_from_project(
-                                &args.config_path,
-                                &selector[*number]
-                            ) {
+                            match storage.get_tasks_from_project(&selector[*number]) {
                                 Ok(returned_tasks) => project_tasks = returned_tasks,
-                                Err(e) => eprintln!("Failed to create project: {}", e)
+                                Err(e) => eprintln!("Failed to create project: {}", e),
                             }
                             input_buffer.clear();
                         } else {
-                            match text_storage::start_timer_on_task(&args.config_path, &selected_project, &selector[*number]) {
+                            match storage.start_timer_on_task(&selected_project, &selector[*number])
+                            {
                                 Ok(()) => break,
-                                Err(e) => eprintln!("Failed to create project: {}", e)
+                                Err(e) => eprintln!("Failed to create project: {}", e),
                             }
                             break;
                         }
                     }
                 }
                 KeyCode::Enter => {
-
-                    // Limpiar todo desde el cursor hacia abajo
+                    // Clean below cursor
                     execute!(
                         io::stdout(),
                         cursor::MoveTo(0, cursor::position().unwrap().1),
                         Clear(ClearType::FromCursorDown)
-                    ).unwrap();
+                    )
+                    .unwrap();
 
-                    // Procesar la línea completa
+                    // Process complete line
                     print!("\r\n");
                     let user_input = input_buffer.trim().to_string();
 
                     if selected_project.is_empty() {
                         if tab_selector.is_none() {
-                            // Ensure text_storage::PROYECTOS_PATH exists
-                            match text_storage::create_project(&args.config_path,&user_input) {
+                            match storage.create_project(&user_input) {
                                 Ok(returned_project) => selected_project = returned_project,
-                                Err(e) => eprintln!("Failed to create project: {}", e)
+                                Err(e) => eprintln!("Failed to create project: {}", e),
                             }
                         } else {
                             selected_project = selector[tab_selector.unwrap()].to_string();
-                            match text_storage::get_tasks_from_project(
-                                &args.config_path,
-                                &selected_project
-                            ) {
+                            match storage.get_tasks_from_project(&selected_project) {
                                 Ok(returned_tasks) => project_tasks = returned_tasks,
-                                Err(e) => eprintln!("Failed to create project: {}", e)
+                                Err(e) => eprintln!("Failed to create project: {}", e),
                             }
                             print!("{:?}", project_tasks);
-                            
                         }
-                        //TODO: testear este caso
+                        //TODO: test this case
                     } else {
                         if tab_selector.is_none() {
-                            text_storage::create_task(&args.config_path, &selected_project, &user_input);
-                            match text_storage::start_timer_on_task(&args.config_path, &selected_project, &input_buffer.trim().to_string()) {
+                            storage.create_task(&selected_project, &user_input);
+                            match storage.start_timer_on_task(
+                                &selected_project,
+                                &input_buffer.trim().to_string(),
+                            ) {
                                 Ok(()) => break,
-                                Err(e) => eprintln!("Failed to start timer on new task: {}", e)
+                                Err(e) => eprintln!("Failed to start timer on new task: {}", e),
                             }
                         } else {
-                            match text_storage::start_timer_on_task(
-                                &args.config_path,
+                            match storage.start_timer_on_task(
                                 &selected_project,
-                                &selector[tab_selector.unwrap()].to_string())
-                                {
+                                &selector[tab_selector.unwrap()].to_string(),
+                            ) {
                                 Ok(()) => break,
-                                Err(e) => eprintln!("Failed to start timer on existing task: {}", e)
+                                Err(e) => {
+                                    eprintln!("Failed to start timer on existing task: {}", e)
+                                }
                             }
                         }
                     }
@@ -173,22 +180,23 @@ fn start_record_note(args: Args) {
                 }
                 KeyCode::Backspace => {
                     tab_selector = None;
-                    // Borrar último carácter
+                    // Delete last character
                     if !input_buffer.is_empty() {
                         input_buffer.pop();
 
-                        // Redibujar todo
+                        //Redraw everthing
                         execute!(
                             io::stdout(),
                             cursor::MoveTo(0, cursor::position().unwrap().1),
                             Clear(ClearType::FromCursorDown)
-                        ).unwrap();
+                        )
+                        .unwrap();
 
-                        // Mostrar la línea de entrada
+                        // Show input line
                         print!("> {}\r\n", input_buffer);
 
-                        // Mostrar el buffer debajo
-                        // TODO: esto se puede refactorizar porque se hace mucho
+                        // Show projects below
+                        // TODO: this should be refactored because it is used a lot
                         if selected_project.is_empty() {
                             selector = utils::order_vector(&input_buffer, &projects);
                         } else {
@@ -196,26 +204,30 @@ fn start_record_note(args: Args) {
                         }
                         print!("{:?}", selector);
 
-                        // Volver al final de la línea de entrada
+                        // Return to end of line
                         execute!(
                             io::stdout(),
-                            cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
-                        ).unwrap();
+                            cursor::MoveTo(
+                                (2 + input_buffer.len()) as u16,
+                                cursor::position().unwrap().1 - 1
+                            )
+                        )
+                        .unwrap();
                         io::stdout().flush().unwrap();
                     }
                 }
                 KeyCode::Tab => {
-                    // Redibujar todo
+                    // Redraw everything
                     let _ = execute!(
                         io::stdout(),
                         cursor::MoveTo(0, cursor::position().unwrap().1),
                         Clear(ClearType::FromCursorDown)
                     );
 
-                    // Mostrar la línea de entrada
+                    // Show input line
                     print!(">{}\r\n", input_buffer);
 
-                    // Mostrar el buffer debajo
+                    // Show selector below
                     if selected_project.is_empty() {
                         selector = utils::order_vector(&input_buffer, &projects);
                     } else {
@@ -224,22 +236,25 @@ fn start_record_note(args: Args) {
                     if tab_selector == None {
                         tab_selector = Some(0);
                     } else {
-                        if tab_selector.unwrap() >= selector.len() -1 {
+                        if tab_selector.unwrap() >= selector.len() - 1 {
                             tab_selector = Some(0);
                         } else {
                             tab_selector = Some(tab_selector.unwrap() + 1);
                         }
                     }
 
-                    // Assuming selector is something like a Vec<String> or Vec<&str>
                     for (i, item) in selector.iter().enumerate() {
                         if Some(i) == tab_selector {
                             // Highlighted item
                             let _ = execute!(
                                 io::stdout(),
-                                crossterm::style::SetAttribute(crossterm::style::Attribute::Reverse),
+                                crossterm::style::SetAttribute(
+                                    crossterm::style::Attribute::Reverse
+                                ),
                                 Print(item),
-                                crossterm::style::SetAttribute(crossterm::style::Attribute::NoReverse),
+                                crossterm::style::SetAttribute(
+                                    crossterm::style::Attribute::NoReverse
+                                )
                             );
                         } else {
                             // Normal item
@@ -250,45 +265,52 @@ fn start_record_note(args: Args) {
                         }
                     }
 
-                    // Volver al final de la línea de entrada
+                    // Come back to end of line
                     execute!(
                         io::stdout(),
-                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
-                    ).unwrap();
+                        cursor::MoveTo(
+                            (2 + input_buffer.len()) as u16,
+                            cursor::position().unwrap().1 - 1
+                        )
+                    )
+                    .unwrap();
                     io::stdout().flush().unwrap();
                 }
                 KeyCode::BackTab => {
-                    // Redibujar todo
+                    // Redraw everything
                     let _ = execute!(
                         io::stdout(),
                         cursor::MoveTo(0, cursor::position().unwrap().1),
                         Clear(ClearType::FromCursorDown)
                     );
 
-                    // Mostrar la línea de entrada
+                    //Show input line
                     print!(">{}\r\n", input_buffer);
 
-                    // Mostrar el buffer debajo
+                    // Show selector below
                     if selected_project.is_empty() {
                         selector = utils::order_vector(&input_buffer, &projects);
                     } else {
                         selector = utils::order_vector(&input_buffer, &project_tasks);
                     }
                     if tab_selector == None || tab_selector.unwrap() == 0 {
-                        tab_selector = Some(selector.len() -1);
+                        tab_selector = Some(selector.len() - 1);
                     } else {
                         tab_selector = Some(tab_selector.unwrap() - 1);
                     }
 
-                    // Assuming selector is something like a Vec<String> or Vec<&str>
                     for (i, item) in selector.iter().enumerate() {
                         if Some(i) == tab_selector {
                             // Highlighted item
                             let _ = execute!(
                                 io::stdout(),
-                                crossterm::style::SetAttribute(crossterm::style::Attribute::Reverse),
+                                crossterm::style::SetAttribute(
+                                    crossterm::style::Attribute::Reverse
+                                ),
                                 Print(item),
-                                crossterm::style::SetAttribute(crossterm::style::Attribute::NoReverse),
+                                crossterm::style::SetAttribute(
+                                    crossterm::style::Attribute::NoReverse
+                                ),
                             );
                         } else {
                             // Normal item
@@ -299,16 +321,21 @@ fn start_record_note(args: Args) {
                         }
                     }
 
-                    // Volver al final de la línea de entrada
+                    // Come back to end of line
                     execute!(
                         io::stdout(),
-                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
-                    ).unwrap();
+                        cursor::MoveTo(
+                            (2 + input_buffer.len()) as u16,
+                            cursor::position().unwrap().1 - 1
+                        )
+                    )
+                    .unwrap();
                     io::stdout().flush().unwrap();
                 }
-                //TODO: Añadir signals para que hagan cosas (crtl+c, etc)
+                //TODO: Add signals support (crtl+c, etc) (or avoid raw terminal handling)
                 KeyCode::Esc => {
-                    let _ = execute!( io::stdout(), 
+                    let _ = execute!(
+                        io::stdout(),
                         cursor::RestorePosition,
                         Clear(ClearType::FromCursorDown),
                     );
@@ -318,22 +345,16 @@ fn start_record_note(args: Args) {
                 }
                 _ => {}
             }
-            let _ = execute!( io::stdout(), cursor::RestorePosition);
+            let _ = execute!(io::stdout(), cursor::RestorePosition);
             let _ = io::stdout().flush();
         }
     }
 
     // Desactivar modo raw al salir
     disable_raw_mode().unwrap();
-
 }
 
-fn end_record_note(args: Args) {
-    let filename_path_buf = text_storage::get_todays_filename(&args.config_path);
-    let filename_path = filename_path_buf.as_path();
-    //let filename_path_buf = text_storage::get_todays_filename(&args.config_path);
-    //let filename_path = filename_path_buf.as_path();
-    // Activar modo raw
+fn end_record_note(storage: Box<dyn Storage>) {
     enable_raw_mode().unwrap();
 
     let mut input_buffer = String::new();
@@ -341,80 +362,55 @@ fn end_record_note(args: Args) {
     print!("> ");
     io::stdout().flush().unwrap();
     loop {
-        // Leer evento del teclado
         if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
             match code {
                 KeyCode::Char(c) => {
-                    // Agregar carácter al buffer
                     input_buffer.push(c);
 
-                    // Redibujar todo
+                    // Redraw everything
                     execute!(
                         io::stdout(),
                         cursor::MoveTo(0, cursor::position().unwrap().1),
                         Clear(ClearType::FromCursorDown)
-                    ).unwrap();
+                    )
+                    .unwrap();
 
-                    // Mostrar la línea de entrada
+                    //Show input line
                     print!("> {}\r\n", input_buffer);
 
-                    // Volver al final de la línea de entrada
+                    // Come back to end of line
                     execute!(
                         io::stdout(),
-                        cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
-                    ).unwrap();
+                        cursor::MoveTo(
+                            (2 + input_buffer.len()) as u16,
+                            cursor::position().unwrap().1 - 1
+                        )
+                    )
+                    .unwrap();
                     io::stdout().flush().unwrap();
 
-                    // Verificar si el buffer termina con "/q"
                     if input_buffer.ends_with("\\q") {
                         print!("\r\n\r\n");
-                        println!("Saliendo del programa...\r");
+                        println!("Quitting program ...\r");
                         break;
                     }
                 }
                 KeyCode::Enter => {
-                    // Limpiar todo desde el cursor hacia abajo
+                    // Clean code below cursor
                     execute!(
                         io::stdout(),
                         cursor::MoveTo(0, cursor::position().unwrap().1),
                         Clear(ClearType::FromCursorDown)
-                    ).unwrap();
+                    )
+                    .unwrap();
 
-                    // Procesar la línea completa
+                    // Process line
                     print!("\r\n");
 
-                        match OpenOptions::new()
-                            .append(true)
-                            .create(true)
-                            .open(&filename_path) {
-                            Ok(mut file) => {
-                                match writeln!(file,
-                                    "{}) {}",
-                                    input_buffer,
-                                    Local::now().format("%H:%M")
-                                ){
-                                    Ok(()) => {}
-                                    Err(e) => eprintln!("Failed to write in file: {}", e)
-                                }
-                            },
-                            Err(e) => eprintln!("Failed to create file: {}", e)
-                        }
-                        //match OpenOptions::new()
-                            //.append(true)
-                            //.create(true)
-                            //.open(&filename_path) {
-                            //Ok(mut file) => {
-                                //match writeln!(file,
-                                    //"{}) {}",
-                                    //input_buffer,
-                                    //Local::now().format("%H:%M")
-                                //){
-                                    //Ok(()) => {}
-                                    //Err(e) => eprintln!("Failed to write in file: {}", e)
-                                //}
-                            //},
-                            //Err(e) => eprintln!("Failed to create file: {}", e)
-                        //}
+                    match storage.end_timer_on_task(&input_buffer) {
+                        Ok(()) => break,
+                        Err(e) => eprintln!("Failed to stop time entry: {}", e),
+                    }
 
                     input_buffer.clear();
                     print!("> ");
@@ -422,28 +418,32 @@ fn end_record_note(args: Args) {
                     break;
                 }
                 KeyCode::Backspace => {
-                    // Borrar último carácter
+                    // Delete last character
                     if !input_buffer.is_empty() {
                         input_buffer.pop();
 
-                        // Redibujar todo
+                        // Redraw everything
                         execute!(
                             io::stdout(),
                             cursor::MoveTo(0, cursor::position().unwrap().1),
                             Clear(ClearType::FromCursorDown)
-                        ).unwrap();
+                        )
+                        .unwrap();
 
-                        // Mostrar la línea de entrada
+                        //Show input line
                         print!("> {}\r\n", input_buffer);
 
-                        // Volver al final de la línea de entrada
+                        // Come back to end of line
                         execute!(
                             io::stdout(),
-                            cursor::MoveTo((2 + input_buffer.len()) as u16, cursor::position().unwrap().1 - 1)
-                        ).unwrap();
+                            cursor::MoveTo(
+                                (2 + input_buffer.len()) as u16,
+                                cursor::position().unwrap().1 - 1
+                            )
+                        )
+                        .unwrap();
                         io::stdout().flush().unwrap();
                     }
-
                 }
                 KeyCode::Esc => {
                     print!("\r\n\r\n");
@@ -455,41 +455,51 @@ fn end_record_note(args: Args) {
         }
     }
 
-    // Desactivar modo raw al salir
     disable_raw_mode().unwrap();
-
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get all arguments
     let args = Args::parse();
 
-    // Construct todays filename
-    let todays_file_path: PathBuf = text_storage::get_todays_filename(&args.config_path);
+    // Read, parse and validate config file
+    let config_file_content = match fs::read_to_string(&args.config_path) {
+        //.expect("Error reading confing file")
+        Ok(content) => content,
+        Err(error) => match error.kind() {
+            ErrorKind::NotFound => {
+                eprintln!("El archivo de configuración no existe en la ruta especificada.");
+                process::exit(1);
+            }
+            _ => {
+                eprintln!("Error leyendo el archivo de configuración: {}", error);
+                process::exit(1);
+            }
+        }
+    };
+    let config: ConfigPrincipal =
+        toml::from_str(&config_file_content).expect("Error while parsing config file");
+    // Set up storage configuration
+    let storage_obj: Box<dyn Storage> = match config.storage {
+        StorageConfig::Sqlite {} => {
+            Box::new(core::data_managing::sqlite_storage::SqliteStorage::new())
+        }
+        StorageConfig::TxtFiles { storage_path } => Box::new(
+            core::data_managing::text_storage::TextStorage::new(PathBuf::from(storage_path)),
+        ),
+    };
+    storage_obj
+        .init()
+        .expect("Error initializing storage configuration");
 
-    // If todays file exists, is empty or complete start a new entry, else end the current note
-    if !todays_file_path.exists() || fs::metadata(&todays_file_path)?.len() == 0 {
-        start_record_note(args);
-    } else {
-        match File::open(&todays_file_path) {
-            Ok(mut file) => {
-                use std::io::Seek;
-                use std::io::SeekFrom;
-
-                // Seek to 2 bytes before the end
-                file.seek(SeekFrom::End(-1))?;
-
-                // Read the last 2 bytes
-                let mut buffer = vec![0u8; 1];
-                file.read_exact(&mut buffer)?;
-
-                if buffer[0] == 10 {
-                    start_record_note(args);
-                } else {
-                    end_record_note(args);
-                }
-            },
-            Err(e) => eprintln!("Failed to open file: {}", e)
+    match storage_obj.get_timer_state() {
+        TimerState::NotStarted => {
+            start_record_note(storage_obj);
+            println!("Timer started succesfuly");
+        }
+        TimerState::Started => {
+            end_record_note(storage_obj);
+            println!("Timer ended succesfuly");
         }
     }
     std::process::exit(0);
