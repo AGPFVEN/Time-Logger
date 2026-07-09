@@ -40,7 +40,7 @@ struct Args {
     config_path: std::path::PathBuf,
 }
 
-fn start_record_note(storage: Box<dyn Storage>) {
+fn start_record_note(storage: Box<dyn Storage>) -> bool {
     let projects: Vec<String> = storage.get_projects();
 
     // Needed variables
@@ -50,6 +50,7 @@ fn start_record_note(storage: Box<dyn Storage>) {
     let re = Regex::new(r"\\([0-9])$").unwrap();
     let mut input_buffer = String::new();
     let mut tab_selector: Option<usize> = None;
+    let mut result: bool;
 
     // Activate raw mode
     enable_raw_mode().unwrap();
@@ -60,7 +61,7 @@ fn start_record_note(storage: Box<dyn Storage>) {
     execute!(io::stdout(), cursor::RestorePosition).unwrap();
     io::stdout().flush().unwrap();
 
-    loop {
+    while result.is {
         // Read keyboard event
         if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
             match code {
@@ -110,16 +111,15 @@ fn start_record_note(storage: Box<dyn Storage>) {
                             selected_project = selector[*number].to_string();
                             match storage.get_tasks_from_project(&selector[*number]) {
                                 Ok(returned_tasks) => project_tasks = returned_tasks,
-                                Err(e) => eprintln!("Failed to create project: {}", e),
+                                Err(e) => panic!("Failed to create project: {}", e),
                             }
                             input_buffer.clear();
                         } else {
                             match storage.start_timer_on_task(&selected_project, &selector[*number])
                             {
-                                Ok(()) => break,
-                                Err(e) => eprintln!("Failed to create project: {}", e),
+                                Ok(()) => result = true,
+                                Err(e) => panic!("Failed to create project: {}", e),
                             }
-                            break;
                         }
                     }
                 }
@@ -140,13 +140,13 @@ fn start_record_note(storage: Box<dyn Storage>) {
                         if tab_selector.is_none() {
                             match storage.create_project(&user_input) {
                                 Ok(returned_project) => selected_project = returned_project,
-                                Err(e) => eprintln!("Failed to create project: {}", e),
+                                Err(e) => panic!("Failed to create project: {}", e),
                             }
                         } else {
                             selected_project = selector[tab_selector.unwrap()].to_string();
                             match storage.get_tasks_from_project(&selected_project) {
                                 Ok(returned_tasks) => project_tasks = returned_tasks,
-                                Err(e) => eprintln!("Failed to create project: {}", e),
+                                Err(e) => panic!("Failed to create project: {}", e),
                             }
                             print!("{:?}", project_tasks);
                         }
@@ -158,17 +158,17 @@ fn start_record_note(storage: Box<dyn Storage>) {
                                 &selected_project,
                                 &input_buffer.trim().to_string(),
                             ) {
-                                Ok(()) => break,
-                                Err(e) => eprintln!("Failed to start timer on new task: {}", e),
+                                Ok(()) => result = true,
+                                Err(e) => panic!("Failed to start timer on new task: {}", e),
                             }
                         } else {
                             match storage.start_timer_on_task(
                                 &selected_project,
                                 &selector[tab_selector.unwrap()].to_string(),
                             ) {
-                                Ok(()) => break,
+                                Ok(()) => result = true,
                                 Err(e) => {
-                                    eprintln!("Failed to start timer on existing task: {}", e)
+                                    panic!("Failed to start timer on existing task: {}", e)
                                 }
                             }
                         }
@@ -352,6 +352,7 @@ fn start_record_note(storage: Box<dyn Storage>) {
 
     // Desactivar modo raw al salir
     disable_raw_mode().unwrap();
+    return result;
 }
 
 fn end_record_note(storage: Box<dyn Storage>) {
@@ -409,7 +410,7 @@ fn end_record_note(storage: Box<dyn Storage>) {
 
                     match storage.end_timer_on_task(&input_buffer) {
                         Ok(()) => break,
-                        Err(e) => eprintln!("Failed to stop time entry: {}", e),
+                        Err(e) => panic!("Failed to stop time entry: {}", e),
                     }
 
                     input_buffer.clear();
@@ -468,12 +469,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(content) => content,
         Err(error) => match error.kind() {
             ErrorKind::NotFound => {
-                eprintln!("El archivo de configuración no existe en la ruta especificada.");
-                process::exit(1);
+                panic!("Config file could not be found");
             }
             _ => {
-                eprintln!("Error leyendo el archivo de configuración: {}", error);
-                process::exit(1);
+                panic!("Error trying to read config file");
             }
         }
     };
