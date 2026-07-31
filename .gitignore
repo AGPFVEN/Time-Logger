@@ -1,10 +1,5 @@
 # Data storage
-/data*/
+testing.db
 
 # Added by cargo
 *target/
-
-
-# Added by cargo
-
-/target
