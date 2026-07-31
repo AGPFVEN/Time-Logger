@@ -1,0 +1,8 @@
+-- Your SQL goes here
+-- ===== Tags =====
+CREATE TABLE IF NOT EXISTS tags (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  name       TEXT NOT NULL UNIQUE,
+  color_hex  TEXT DEFAULT '#808080',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

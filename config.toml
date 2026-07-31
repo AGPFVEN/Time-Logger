@@ -1,0 +1,6 @@
+[storage]
+# Configuration for the storage backend.
+# Currently, only 'sqlite' is supported by the application structure.
+
+[storage.sqlite]
+database_url = "./../testing.db"

@@ -1,0 +1,62 @@
+ - [x] Hacer línea del día de hoy
+	 - [x] Iniciar con append
+		 - [x] Meter la hora de inicio en la línea
+		 - [x] Meter proyecto en la línea
+		 - [x] Meter task en la línea
+	 - [x] Terminar con append
+		 - [x] Identificar cuando toca final de línea
+		 - [x] Meter descripción a más detalle en la línea
+		 - [x] Meter la hora final en la línea
+	 - [x] Meter horas de horario del usuario
+ - [x] Hacer keybinding (Quizás local para no hacer nada raro)
+ - [x] Arreglar primera entrada
+ - [x] Arreglar caso proyecto nuevo y task nuevo
+ - [x] Probar caso proyecto existente y task nuevo
+ - [x] Hacer un comando para ver y editar archivo de hoy
+ - [x] Ver como usar vscode para renombrar task (Regex con búsqueda)
+ - [x] Dividir código porque el servidor de rust me va a explotar
+ - [x] Meter data_path como un argumento del comando
+ - [x] Mejorar experiencia
+	 - [x] Seleccionar con tab
+	 - [x] Hacer tab inverso
+	 - [x] Quitar \q y dejar esc para salir
+	 - [x] Hacer refresh de la misma línea y no hacer una línea por print 
+	 - [x] Al seleccionar proyecto hacer flush
+	 - [x] Al seleccionar proyecto mostrar el selector de tasks
+	 - [x] Qué borrar muestre el selector correcto
+	 - [x] Qué el terminal quede bien (no mezclar comando con línea de terminal en la misma línea)
+	 - [x] Organización automática de archivos (como está en el otro proyecto)
+ - [ ] Implement sqlite
+	 - [x] Design sql scheme and basic tests
+	 - [x] Generalize code to adapt between text and sqlite seemlesly
+	 - [x] Implementar funciones 
+	 - [ ] link parent task and child task
+ - [ ] Hacer migración a base de datos
+ - [ ] Hacer análisis básico en rust
+	 - [ ] Día
+	 - [ ] Semana
+ - [ ] Implementar con github
+ - [ ] Mover a ratatui
+	 - [ ] Hacer interfaces ya existentes
+		 - [ ] Seleccionar tarea (o crearla)
+			 - [ ] Hacer un bloque con barra de búsqueda
+			 - [ ] Hacer un  bloque con resultados
+				 - [ ] Barra de con números para seleccionar de una con números
+		 - [ ] Darle un comentario a la tarea que se terminó
+			 - [ ] Hacer un bloque con cuanto llevo hecho de esa tarea
+ - [ ] Mostrar las tareas en orden de ultimamente hechas
+ - [ ] Si hay una tarea en curso desde el día anterior terminarla y seguirla hoy
+ - [ ] Hacer cálculo de semana anterior
+
+ - [ ] Hacer forma de ver semana anterior
+ - [ ] Seguir con otra tarea
+ - [ ] Hacer delays de tiempo (empecé hace 5 mins)
+ - [ ] Hacer un comando para repetir última actividad
+ - [ ] Hacer un comando para quitar línea empezada
+ - [ ] Hacer que los paths del config puedan ser absolutos
+ - [ ] Hacer tests (por ahora los test solo checkearan condiciones del sistema no prints)
+	 - [x] Abrir (sin datos previos) y cerrar el programa
+	 - [ ] Abrir (con ya creado) y crear proyecto y tarea
+	 - [ ] reusar proyecto con tarea nueva
+	 - [ ] reusar tarea ya creada
+	 - [ ] Una run entera sin datos previos

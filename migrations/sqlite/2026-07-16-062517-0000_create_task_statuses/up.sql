@@ -1,0 +1,7 @@
+-- Your SQL goes here
+CREATE TABLE IF NOT EXISTS task_statuses (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  key       TEXT NOT NULL UNIQUE,
+  label     TEXT NOT NULL,
+  is_closed BOOLEAN NOT NULL DEFAULT 0
+);

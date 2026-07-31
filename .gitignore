@@ -1,5 +1,10 @@
 # Data storage
-/data
+/data*/
 
 # Added by cargo
+*target/
+
+
+# Added by cargo
+
 /target
