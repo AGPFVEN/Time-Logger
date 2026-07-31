@@ -7,4 +7,4 @@ Y Para rehacer toda la base de datos se haría:
 diesel migration revert --all --migration-dir migrations/sqlite && diesel migration run --migration-dir migrations/sqlite
 
 Para ejecutar cli hay que hacer:
-cargo run --bin cli -- --config-path=./../config.toml
+cargo run -p cli -- --config-path=./../config.toml record

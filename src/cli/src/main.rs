@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEvent},
@@ -34,9 +34,15 @@ enum StorageConfig {
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Name of the person to greet
     #[arg(short, long, default_value = "./config.toml")]
     config_path: std::path::PathBuf,
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Record,
 }
 
 fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
@@ -462,25 +468,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let config: ConfigPrincipal =
         toml::from_str(&config_file_content).expect("Error while parsing config file");
+
     // Set up storage configuration
     let storage_obj: Box<dyn Storage> = match config.storage {
-        StorageConfig::Sqlite {database_url} => {
-            Box::new(app_core::data_managing::data_sqlite::SqliteStorage::init(&database_url))
-        }
+        StorageConfig::Sqlite { database_url } => Box::new(
+            app_core::data_managing::data_sqlite::SqliteStorage::init(&database_url),
+        ),
     };
 
-    match storage_obj.get_timer_state() {
-        (TimerState::NotStarted, None) => match start_record_note(storage_obj) {
-            Ok(_) => println!("Timer started succesfuly"),
-            Err(_) => panic!("Error starting timer"),
-        },
-        (TimerState::Started, Some(time_entry_id)) => {
-            match end_record_note(storage_obj, time_entry_id) {
-                Ok(_) => println!("Timer ended succesfuly"),
-                Err(_) => panic!("Error ending timer"),
+    // Route subcommand
+    match args.command {
+        Commands::Record => match storage_obj.get_timer_state() {
+            (TimerState::NotStarted, None) => match start_record_note(storage_obj) {
+                Ok(_) => println!("Timer started succesfuly"),
+                Err(_) => panic!("Error starting timer"),
+            },
+            (TimerState::Started, Some(time_entry_id)) => {
+                match end_record_note(storage_obj, time_entry_id) {
+                    Ok(_) => println!("Timer ended succesfuly"),
+                    Err(_) => panic!("Error ending timer"),
+                }
             }
-        }
-        _ => panic!("Something has gone very wrong"),
+            _ => panic!("Something has gone very wrong"),
+        },
     }
     std::process::exit(0);
 }
