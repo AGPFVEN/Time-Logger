@@ -1,14 +1,11 @@
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
-use std::{
-    fs,
-    io::ErrorKind,
-    panic,
-};
+use std::{fs, io::ErrorKind, panic};
 
 use app_core::data_managing::{Storage, TimerState};
 mod subcommands;
-use subcommands::record_time_entry::{start_record_note, end_record_note};
+use subcommands::record_time_entry::{end_record_note, start_record_note};
+
 // Structure of config file
 #[derive(Deserialize, Debug)]
 struct ConfigPrincipal {
