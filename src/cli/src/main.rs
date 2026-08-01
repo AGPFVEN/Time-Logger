@@ -4,7 +4,10 @@ use std::{fs, io::ErrorKind, panic};
 
 use app_core::data_managing::{Storage, TimerState};
 mod subcommands;
-use subcommands::record_time_entry::{end_record_note, start_record_note};
+use subcommands::{
+    link_tasks::link_tasks,
+    record_time_entry::{end_record_note, start_record_note},
+};
 
 // Structure of config file
 #[derive(Deserialize, Debug)]
@@ -31,6 +34,7 @@ struct Args {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Record,
+    Link,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -73,6 +77,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             _ => panic!("Something has gone very wrong"),
+        },
+        Commands::Link => match link_tasks(storage_obj) {
+            Ok(_) => println!("Task link succesful"),
+            Err(_) => panic!("Something has gone very wrong"),
         },
     }
     std::process::exit(0);

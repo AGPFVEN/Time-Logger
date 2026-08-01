@@ -167,3 +167,11 @@ pub struct NewProjectTaskDependency {
     pub project_id: i32,
     pub task_id: i32,
 }
+
+// --- Link Tasks to Tasks ---
+#[derive(Insertable)]
+#[diesel(table_name = super::schema::task_task_dependencies)]
+pub struct NewTaskTaskDependency {
+    pub parent_id: i32,
+    pub child_id: i32,
+}

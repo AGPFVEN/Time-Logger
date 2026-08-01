@@ -106,7 +106,16 @@ impl Storage for SqliteStorage {
             &mut self.lock_db_mutex(),
             entry_to_close_id,
             end_time_formatted,
-            description_input
+            description_input,
         )
+    }
+
+    fn link_task_2_task(&self, project_name: &str, task_parent_name: &str, task_child_name: &str) {
+        queries::task::link_task_2_task(
+            &mut self.lock_db_mutex(),
+            project_name,
+            task_parent_name,
+            task_child_name,
+        );
     }
 }

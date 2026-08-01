@@ -1,6 +1,7 @@
-use crate::data_managing::data_sqlite::models::NewTask;
+use crate::data_managing::data_sqlite::models::{NewTask, NewTaskTaskDependency, Task};
 use crate::data_managing::data_sqlite::schema::{
-    project_task_dependencies, projects, tasks, tasks::dsl::tasks as other_task,
+    project_task_dependencies, projects, task_task_dependencies, tasks,
+    tasks::dsl::tasks as other_task,
 };
 use diesel::prelude::*;
 
@@ -49,6 +50,52 @@ pub fn get_tasks_from_project(
         Err(err_msg) => panic!(
             "Error searching all tasks from project: {} \n {}",
             parent_project_name, err_msg
+        ),
+    }
+}
+
+pub fn link_task_2_task(
+    conn: &mut SqliteConnection,
+    project_name: &str,
+    task_parent_name: &str,
+    task_child_name: &str,
+) {
+    let task_parent = search_task(conn, project_name, task_parent_name);
+    let task_child = search_task(conn, project_name, task_child_name);
+
+    let new_dependency = NewTaskTaskDependency {
+        parent_id: task_parent.id,
+        child_id: task_child.id,
+    };
+
+    diesel::insert_into(task_task_dependencies::table)
+        .values(&new_dependency)
+        .execute(conn)
+        .expect("Error linking task to project");
+}
+
+fn search_task(conn: &mut SqliteConnection, project_name: &str, task_name: &str) -> Task {
+    match tasks::dsl::tasks
+        .inner_join(
+            project_task_dependencies::dsl::project_task_dependencies
+                .inner_join(projects::dsl::projects),
+        )
+        .filter(projects::dsl::name.eq(project_name))
+        .filter(tasks::dsl::title.eq(task_name))
+        .select(tasks::all_columns)
+        .first(conn)
+        .optional()
+    {
+        Ok(task_res) => match task_res {
+            Some(task) => return task,
+            None => panic!(
+                "There's no task named {} from project {}",
+                task_name, project_name
+            ),
+        },
+        Err(err_msg) => panic!(
+            "An error occurred while searching in SQLite db when:\nsearching task: {}\nfrom project: {}\n{}",
+            task_name, project_name, err_msg
         ),
     }
 }

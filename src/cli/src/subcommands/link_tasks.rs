@@ -9,11 +9,12 @@ use std::io::{self, Write};
 
 use app_core::{data_managing::Storage, utils};
 
-pub fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
+pub fn link_tasks(storage: Box<dyn Storage>) -> Result<(), io::Error> {
     let projects: Vec<String> = storage.get_projects();
 
     // Needed variables
     let mut selected_project: String = "".to_string();
+    let mut selected_parent_task: String = "".to_string();
     let mut project_tasks: Vec<String> = Vec::new();
     let mut selector: Vec<String> = Vec::new();
     let mut input_buffer = String::new();
@@ -79,38 +80,31 @@ pub fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
 
                     // Process complete line
                     print!("\r\n");
-                    let user_input = input_buffer.trim().to_string();
 
                     if selected_project.is_empty() {
                         if tab_selector.is_none() {
-                            storage.create_project(&user_input);
-                            selected_project = user_input;
+                            print!("To link tasks a project must be selected")
                         } else {
                             selected_project = selector[tab_selector.unwrap()].to_string();
                             project_tasks = storage.get_tasks_from_project(&selected_project);
                             print!("{:?}", project_tasks);
                         }
-                        //TODO: test this case
+                    } else if selected_parent_task.is_empty() {
+                        if tab_selector.is_none() {
+                            print!("To link tasks a task must be selected");
+                        } else {
+                            selected_parent_task = selector[tab_selector.unwrap()].to_string();
+                            print!("parent task selected: {:?}", selected_parent_task);
+                        }
                     } else {
                         if tab_selector.is_none() {
-                            storage.create_task(&selected_project, &user_input);
-                            match storage.start_timer_on_task(
-                                &selected_project,
-                                &input_buffer.trim().to_string(),
-                            ) {
-                                Ok(()) => break,
-                                Err(e) => panic!("Failed to start timer on new task: {}", e),
-                            }
+                            print!("To link tasks a task must be selected");
                         } else {
-                            match storage.start_timer_on_task(
+                            storage.link_task_2_task(
                                 &selected_project,
+                                &selected_parent_task,
                                 &selector[tab_selector.unwrap()].to_string(),
-                            ) {
-                                Ok(()) => break,
-                                Err(e) => {
-                                    panic!("Failed to start timer on existing task: {}", e)
-                                }
-                            }
+                            );
                         }
                     }
 
@@ -287,100 +281,6 @@ pub fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
             }
             let _ = execute!(io::stdout(), cursor::RestorePosition);
             let _ = io::stdout().flush();
-        }
-    }
-
-    disable_raw_mode().unwrap();
-    Ok(())
-}
-
-pub fn end_record_note(storage: Box<dyn Storage>, time_entry_id: i32) -> Result<(), io::Error> {
-    enable_raw_mode().unwrap();
-
-    let mut input_buffer = String::new();
-
-    print!("> ");
-    io::stdout().flush().unwrap();
-    loop {
-        if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
-            match code {
-                KeyCode::Char(c) => {
-                    input_buffer.push(c);
-
-                    // Redraw everything
-                    execute!(
-                        io::stdout(),
-                        cursor::MoveTo(0, cursor::position().unwrap().1),
-                        Clear(ClearType::FromCursorDown)
-                    )
-                    .unwrap();
-
-                    //Show input line
-                    print!("> {}\r\n", input_buffer);
-
-                    // Come back to end of line
-                    execute!(
-                        io::stdout(),
-                        cursor::MoveTo(
-                            (2 + input_buffer.len()) as u16,
-                            cursor::position().unwrap().1 - 1
-                        )
-                    )
-                    .unwrap();
-                    io::stdout().flush().unwrap();
-                }
-                KeyCode::Enter => {
-                    // Clean code below cursor
-                    execute!(
-                        io::stdout(),
-                        cursor::MoveTo(0, cursor::position().unwrap().1),
-                        Clear(ClearType::FromCursorDown)
-                    )
-                    .unwrap();
-
-                    // Process line
-                    print!("\r\n");
-
-                    match storage.end_timer_on_task(&time_entry_id, &input_buffer) {
-                        Ok(()) => break,
-                        Err(e) => panic!("Failed to stop time entry: {}", e),
-                    }
-                }
-                KeyCode::Backspace => {
-                    // Delete last character
-                    if !input_buffer.is_empty() {
-                        input_buffer.pop();
-
-                        // Redraw everything
-                        execute!(
-                            io::stdout(),
-                            cursor::MoveTo(0, cursor::position().unwrap().1),
-                            Clear(ClearType::FromCursorDown)
-                        )
-                        .unwrap();
-
-                        //Show input line
-                        print!("> {}\r\n", input_buffer);
-
-                        // Come back to end of line
-                        execute!(
-                            io::stdout(),
-                            cursor::MoveTo(
-                                (2 + input_buffer.len()) as u16,
-                                cursor::position().unwrap().1 - 1
-                            )
-                        )
-                        .unwrap();
-                        io::stdout().flush().unwrap();
-                    }
-                }
-                KeyCode::Esc => {
-                    print!("\r\n\r\n");
-                    println!("Saliendo del programa...\r");
-                    break;
-                }
-                _ => {}
-            }
         }
     }
 

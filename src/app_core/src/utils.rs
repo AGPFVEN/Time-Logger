@@ -17,7 +17,9 @@ pub fn levenshtein_distancia(s1: &str, s2: &str) -> usize {
     for (i, char1) in s1.chars().enumerate() {
         for (j, char2) in s2.chars().enumerate() {
             let cost = if char1 == char2 { 0 } else { 1 };
-            matriz[i + 1][j + 1] = (matriz[i][j + 1] + 1).min(matriz[i + 1][j] + 1).min(matriz[i][j] + cost);
+            matriz[i + 1][j + 1] = (matriz[i][j + 1] + 1)
+                .min(matriz[i + 1][j] + 1)
+                .min(matriz[i][j] + cost);
         }
     }
 
@@ -33,10 +35,10 @@ pub fn order_vector(s: &str, v: &Vec<String>) -> Vec<String> {
         let mut used = false;
         for (index, value) in result_dis.iter().enumerate() {
             if lev < *value {
-               result.insert(index, val.to_string());
-               used_index = index;
-               used = true;
-               break;
+                result.insert(index, val.to_string());
+                used_index = index;
+                used = true;
+                break;
             }
         }
         if used == false {

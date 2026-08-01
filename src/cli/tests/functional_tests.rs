@@ -1,9 +1,8 @@
-use std::{path::PathBuf, thread, time};
 use anyhow::{Ok, Result};
 use rexpect::spawn;
+use std::{path::PathBuf, thread, time};
 use tempfile::tempdir;
 //use indoc::indoc;
-
 
 #[test]
 fn open_close() -> Result<()> {
@@ -25,7 +24,8 @@ fn open_close() -> Result<()> {
 
     // Check if the required folders exist
     if temp_path.join(PathBuf::from("Projects")).exists()
-    && temp_path.join(PathBuf::from("Weeks")).exists() {
+        && temp_path.join(PathBuf::from("Weeks")).exists()
+    {
         return Ok(());
     } else {
         Err(anyhow::anyhow!("Required folders not found"))
@@ -58,9 +58,12 @@ fn open_simple_start() -> Result<()> {
     p.exp_string("Archivo creado exitosamente.")?;
 
     // Check if the required folders exist
-    if temp_path.join("Projects").exists()
-    && temp_path.join("Weeks").exists() {
-        if temp_path.join("Projects").join("Proyecto testing.txt").exists() {
+    if temp_path.join("Projects").exists() && temp_path.join("Weeks").exists() {
+        if temp_path
+            .join("Projects")
+            .join("Proyecto testing.txt")
+            .exists()
+        {
             return Ok(());
         } else {
             Err(anyhow::anyhow!("Required file not found"))
