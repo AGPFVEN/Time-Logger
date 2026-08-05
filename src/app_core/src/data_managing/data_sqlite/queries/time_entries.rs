@@ -2,6 +2,7 @@ use crate::data_managing::data_sqlite::models::{NewTimeEntry, TimeEntry, UpdateT
 use crate::data_managing::data_sqlite::schema::{
     project_task_dependencies, projects, tasks, time_entries, time_entries::dsl::*,
 };
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 
 pub fn find_incomplete(conn: &mut SqliteConnection) -> Option<TimeEntry> {
@@ -55,9 +56,30 @@ pub fn close_time_entry(
     end_time_input: &str,
     description_input: &str,
 ) -> Result<(), diesel::result::Error> {
+    // Search start time of time_entry
+    let start_time_entry = match time_entries
+        .find(entry_to_close_id)
+        .select(start_time)
+        .first::<String>(conn)
+    {
+        Ok(entry_start_time) => entry_start_time,
+        Err(e) => {
+            eprintln!("Error when extracting start time of entry: {}", e);
+            return Err(e);
+        }
+    };
+
+    // Calculate duration of time_entry
+    let format = "%Y-%m-%d %H:%M:%S";
+    let start = NaiveDateTime::parse_from_str(&start_time_entry, format).unwrap();
+    let end = NaiveDateTime::parse_from_str(end_time_input, format).unwrap();
+    let duration_seconds = (end - start).num_seconds() as i32;
+
+    // Send to SQLite
     match diesel::update(time_entries.find(entry_to_close_id))
         .set(&UpdateTimeEntry {
             end_time: end_time_input,
+            duration: &duration_seconds,
             description: description_input,
         })
         .execute(conn)

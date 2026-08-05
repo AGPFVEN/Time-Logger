@@ -1,5 +1,5 @@
 # Data storage
-testing.db
+*.db
 
 # Added by cargo
 *target/

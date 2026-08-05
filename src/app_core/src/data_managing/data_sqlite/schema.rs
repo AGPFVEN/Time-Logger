@@ -91,6 +91,7 @@ diesel::table! {
         end_time -> Nullable<Text>,
         description -> Nullable<Text>,
         created_at -> Text,
+        duration -> Nullable<Integer>,
     }
 }
 

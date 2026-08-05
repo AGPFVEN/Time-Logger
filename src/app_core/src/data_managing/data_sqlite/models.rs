@@ -132,6 +132,7 @@ pub struct TimeEntry {
     pub end_time: Option<String>,
     pub description: Option<String>,
     pub created_at: String,
+    pub duration: Option<i32>,
 }
 
 #[derive(Insertable)]
@@ -147,6 +148,7 @@ pub struct NewTimeEntry<'a> {
 #[diesel(table_name = time_entries)]
 pub struct UpdateTimeEntry<'a> {
     pub end_time: &'a str,
+    pub duration: &'a i32,
     pub description: &'a str,
 }
 
