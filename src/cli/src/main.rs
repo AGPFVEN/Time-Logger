@@ -57,11 +57,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         toml::from_str(&config_file_content).expect("Error while parsing config file");
 
     // Set up storage configuration
-    let storage_obj: Box<dyn Storage> = match config.storage {
-        StorageConfig::Sqlite { database_url } => Box::new(
-            app_core::data_managing::data_sqlite::SqliteStorage::init(&database_url),
-        ),
-    };
+    //let storage_obj: Box<dyn Storage> = match config.storage {
+        //StorageConfig::Sqlite { database_url } => Box::new(
+            //app_core::data_managing::data_sqlite::SqliteStorage::init(&database_url),
+        //),
+    //};
+    let storage_obj: Box<dyn Storage> = Box::new(app_core::data_managing::data_odoo::OdooStorage::init("e"));
 
     // Route subcommand
     match args.command {
