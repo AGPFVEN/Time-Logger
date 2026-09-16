@@ -1,5 +1,5 @@
 use anyhow::Error;
-use chrono::Local;
+use chrono::{Local, NaiveDateTime};
 use odoo_api::{
     OdooClient,
     client::{Authed, ReqwestBlocking},
@@ -96,7 +96,8 @@ impl Storage for OdooStorage {
                 "search_read",
                 jvec![[
                     ["active", "=", true],
-                    ["project_id.display_name", "=", project_name]
+                    ["project_id.display_name", "=", project_name],
+                    ["is_closed", "=", false]
                 ]],
                 jmap! { "fields": ["id", "display_name"] },
             )
@@ -127,6 +128,7 @@ impl Storage for OdooStorage {
             task_name,
             &Local::now().format("%Y-%m-%d %H:%M:%S").to_string()
         );
+        // TODO: No usar este magic name
         fs::write("cualquier_nombre.txt", contenido).unwrap();
         Ok(())
     }
@@ -163,14 +165,18 @@ impl Storage for OdooStorage {
                         .and_then(|vec| vec.first())
                         .and_then(|val| val.get("id"))
                         .and_then(|val| val.as_i64());
-                        
+
                     let task_id = self
                         .odoo_client
                         .borrow_mut()
                         .execute_kw(
-                            "project.project",
+                            "project.task",
                             "search_read",
-                            jvec![[["active", "=", true], ["display_name", "=", lineas[1]], ["project_id", "=", project_id]]],
+                            jvec![[
+                                ["active", "=", true],
+                                ["display_name", "=", lineas[1]],
+                                ["project_id", "=", project_id],
+                            ]],
                             jmap! { "fields": ["id", "display_name"] },
                         )
                         .send()
@@ -181,22 +187,37 @@ impl Storage for OdooStorage {
                         .and_then(|val| val.get("id"))
                         .and_then(|val| val.as_i64());
 
-                    let partners = self
+                    // TODO: reduce one time variables
+                    let start_time =
+                        NaiveDateTime::parse_from_str(lineas[2], "%Y-%m-%d %H:%M:%S")
+                            .expect("Failed to parse the start date string");
+
+                    let current_time = Local::now().naive_local();
+
+                    let duration = current_time
+                        .signed_duration_since(start_time)
+                        .num_minutes();
+
+                    let result = self
                         .odoo_client
                         .borrow_mut()
                         .create(
                             "account.analytic.line",
                             jvec![{
                                 "name": description_input,
-                                "project_id": [project_id, lineas[0]],
-                                "task_id": [task_id, lineas[1]],
-                                "unit_amount": 10,
+                                "project_id": project_id,
+                                "task_id": task_id,
+                                "unit_amount": duration,
                             }],
                         )
                         .send();
 
-                    if partners.is_err(){
-                        panic!("Error when creating time entry")
+                    match result {
+                        Ok(_data) => (),
+                        Err(e) => {
+                            eprintln!("Odoo API Error: {:#?}", e);
+                            panic!("Error when creating time entry");
+                        }
                     }
 
                     return Ok(());
