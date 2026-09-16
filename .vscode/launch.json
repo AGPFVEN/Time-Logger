@@ -8,16 +8,21 @@
             "name": "Debug executable 'cli'",
             "type": "lldb",
             "request": "launch",
-            "args": [],
-            "cwd": "${workspaceFolder}",
+            "args": [
+                "--config-path",
+                "./../config.toml",
+                "record"
+            ],
             "sourceLanguages": ["rust"],
             "cargo": {
                 "args": [
-                    "run",
+                    "build",
                     "--bin=cli",
-                    "--package=cli"
+                    "--package=cli",
+                    "--manifest-path=${workspaceFolder}/src/Cargo.toml"
                 ]
-            }
+            },
+            "cwd": "/home/agpfven/coding/personal/time-Logger/src",
         }
         
     ]

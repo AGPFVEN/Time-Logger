@@ -1,14 +1,14 @@
 use anyhow::Error;
 use chrono::Local;
-use core::task;
 use odoo_api::{
     OdooClient,
     client::{Authed, ReqwestBlocking},
     jmap, jvec,
     service::object::ExecuteKwResponse,
 };
-use std::{path::Path, result::Result::Ok};
+use serde_json::from_str;
 use std::{cell::RefCell, fs};
+use std::{path::Path, result::Result::Ok};
 
 use super::{Storage, TimerState};
 
@@ -83,7 +83,9 @@ impl Storage for OdooStorage {
         return project_names;
     }
 
-    fn create_project(&self, project_name: &str) {}
+    fn create_project(&self, project_name: &str) {
+        println!("Not doing anything")
+    }
 
     fn get_tasks_from_project(&self, project_name: &str) -> Vec<String> {
         // Search projects in odoo
@@ -115,7 +117,9 @@ impl Storage for OdooStorage {
         return tasks_names;
     }
 
-    fn create_task(&self, project_name: &str, task_name: &str) {}
+    fn create_task(&self, project_name: &str, task_name: &str) {
+        println!("Not doing anything")
+    }
 
     fn start_timer_on_task(&self, project_name: &str, task_name: &str) -> Result<(), Error> {
         let contenido = format!(
@@ -133,8 +137,28 @@ impl Storage for OdooStorage {
         entry_to_close_id: &i32,
         description_input: &str,
     ) -> Result<(), Error> {
+        let filename = "cualquier_nombre.txt";
+        if Path::new(filename).exists() {
+            if let Ok(file_content) = fs::read_to_string(filename) {
+                let lineas: Vec<&str> = file_content.lines().collect();
+                if lineas.len() >= 3 {
+                    let estado = (
+                        lineas[0].to_string(),
+                        lineas[1].to_string(),
+                        lineas[2].to_string(),
+                    );
+
+                    
+
+                    return Ok(());
+                }
+            }
+        }
+
         Ok(())
     }
 
-    fn link_task_2_task(&self, project_name: &str, task_parent_name: &str, task_child_name: &str) {}
+    fn link_task_2_task(&self, project_name: &str, task_parent_name: &str, task_child_name: &str) {
+        println!("Not doing anything")
+    }
 }
