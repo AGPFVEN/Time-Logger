@@ -45,6 +45,7 @@ impl Storage for OdooStorage {
         Self::new()
     }
 
+    // TODO: guardar en una posición absoluta como un .time-logger/data
     fn get_timer_state(&self) -> (TimerState, Option<i32>) {
         let nombre_archivo = "cualquier_nombre.txt";
 
