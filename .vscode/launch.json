@@ -22,7 +22,7 @@
                     "--manifest-path=${workspaceFolder}/src/Cargo.toml"
                 ]
             },
-            "cwd": "/home/agpfven/coding/personal/time-Logger/src",
+            "cwd": "/home/agpfven/coding/personal/time-logger/src",
         }
         
     ]

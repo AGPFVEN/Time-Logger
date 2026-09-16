@@ -1,5 +1,4 @@
 // Función para calcular la distancia de Levenshtein entre dos strings.
-//TODO: Posible optimización con distancia levenshtein
 pub fn levenshtein_distancia(s1: &str, s2: &str) -> usize {
     let len1 = s1.chars().count();
     let len2 = s2.chars().count();

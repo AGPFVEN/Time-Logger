@@ -34,7 +34,6 @@ pub fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
             match code {
                 KeyCode::Char(c) => {
                     tab_selector = None;
-                    //TODO: Make user know which project and task he is on
                     // Add character to buffer
                     input_buffer.push(c);
 
@@ -90,7 +89,6 @@ pub fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
                             project_tasks = storage.get_tasks_from_project(&selected_project);
                             print!("{:?}", project_tasks);
                         }
-                        //TODO: test this case
                     } else {
                         if tab_selector.is_none() {
                             storage.create_task(&selected_project, &user_input);
@@ -136,7 +134,6 @@ pub fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
                         print!("> {}\r\n", input_buffer);
 
                         // Show projects below
-                        // TODO: this should be refactored because it is used a lot
                         if selected_project.is_empty() {
                             selector = utils::order_vector(&input_buffer, &projects);
                         } else {
@@ -272,7 +269,6 @@ pub fn start_record_note(storage: Box<dyn Storage>) -> Result<(), io::Error> {
                     .unwrap();
                     io::stdout().flush().unwrap();
                 }
-                //TODO: Add signals support (crtl+c, etc) (or avoid raw terminal handling)
                 KeyCode::Esc => {
                     let _ = execute!(
                         io::stdout(),

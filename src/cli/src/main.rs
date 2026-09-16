@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(_) => panic!("Error ending timer"),
                 }
             }
-            _ => panic!("Something has gone very wrong"),
+            wer => panic!("The operation related to recording a time entry couldn't be identified"),
         },
         Commands::Link => match link_tasks(storage_obj) {
             Ok(_) => println!("Task link succesful"),

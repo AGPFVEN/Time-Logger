@@ -6,7 +6,6 @@ use odoo_api::{
     jmap, jvec,
     service::object::ExecuteKwResponse,
 };
-use serde_json::from_str;
 use std::{cell::RefCell, fs};
 use std::{path::Path, result::Result::Ok};
 
@@ -50,7 +49,7 @@ impl Storage for OdooStorage {
         let nombre_archivo = "cualquier_nombre.txt";
 
         if Path::new(nombre_archivo).exists() {
-            return (TimerState::Started, None);
+            return (TimerState::Started, Some(1));
         } else {
             return (TimerState::NotStarted, None);
         }
@@ -143,12 +142,62 @@ impl Storage for OdooStorage {
                 let lineas: Vec<&str> = file_content.lines().collect();
                 if lineas.len() >= 3 {
                     let estado = (
-                        lineas[0].to_string(),
-                        lineas[1].to_string(),
-                        lineas[2].to_string(),
+                        lineas[0].to_string(), // Project name
+                        lineas[1].to_string(), // Task name
+                        lineas[2].to_string(), // Timestamp de inicio
                     );
 
-                    
+                    let project_id = self
+                        .odoo_client
+                        .borrow_mut()
+                        .execute_kw(
+                            "project.project",
+                            "search_read",
+                            jvec![[["active", "=", true], ["display_name", "=", lineas[0]]]],
+                            jmap! { "fields": ["id", "display_name"] },
+                        )
+                        .send()
+                        .expect("Failed to execute Odoo kw request")
+                        .data
+                        .as_array()
+                        .and_then(|vec| vec.first())
+                        .and_then(|val| val.get("id"))
+                        .and_then(|val| val.as_i64());
+                        
+                    let task_id = self
+                        .odoo_client
+                        .borrow_mut()
+                        .execute_kw(
+                            "project.project",
+                            "search_read",
+                            jvec![[["active", "=", true], ["display_name", "=", lineas[1]], ["project_id", "=", project_id]]],
+                            jmap! { "fields": ["id", "display_name"] },
+                        )
+                        .send()
+                        .expect("Failed to execute Odoo kw request")
+                        .data
+                        .as_array()
+                        .and_then(|vec| vec.first())
+                        .and_then(|val| val.get("id"))
+                        .and_then(|val| val.as_i64());
+
+                    let partners = self
+                        .odoo_client
+                        .borrow_mut()
+                        .create(
+                            "account.analytic.line",
+                            jvec![{
+                                "name": description_input,
+                                "project_id": [project_id, lineas[0]],
+                                "task_id": [task_id, lineas[1]],
+                                "unit_amount": 10,
+                            }],
+                        )
+                        .send();
+
+                    if partners.is_err(){
+                        panic!("Error when creating time entry")
+                    }
 
                     return Ok(());
                 }
