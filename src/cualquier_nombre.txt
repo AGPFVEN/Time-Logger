@@ -1,3 +1,0 @@
-Time-Logger+odoo (cli)
-Compilar un core diferente
-2026-09-16 08:32:38
