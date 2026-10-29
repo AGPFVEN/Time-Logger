@@ -197,7 +197,7 @@ impl Storage for OdooStorage {
 
                     let duration = current_time
                         .signed_duration_since(start_time)
-                        .num_minutes();
+                        .num_minutes() as f64 / 60.0;
 
                     let result = self
                         .odoo_client
