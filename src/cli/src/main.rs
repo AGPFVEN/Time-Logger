@@ -19,6 +19,7 @@ struct ConfigPrincipal {
 #[serde(rename_all = "snake_case")]
 enum StorageConfig {
     Sqlite { database_url: String },
+    Odoo { url: String, db: String, username: String, token: String },
 }
 
 // Flags
@@ -57,12 +58,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         toml::from_str(&config_file_content).expect("Error while parsing config file");
 
     // Set up storage configuration
-    //let storage_obj: Box<dyn Storage> = match config.storage {
-        //StorageConfig::Sqlite { database_url } => Box::new(
-            //app_core::data_managing::data_sqlite::SqliteStorage::init(&database_url),
-        //),
-    //};
-    let storage_obj: Box<dyn Storage> = Box::new(app_core::data_managing::data_odoo::OdooStorage::init("e"));
+    let storage_obj: Box<dyn Storage> = match config.storage {
+        StorageConfig::Sqlite { database_url } => {
+            Box::new(app_core::data_managing::data_sqlite::SqliteStorage::new(&database_url))
+        }
+        StorageConfig::Odoo { url, db, username, token } => {
+            Box::new(app_core::data_managing::data_odoo::OdooStorage::new(&url, &db, &username, &token))
+        }
+    };
 
     // Route subcommand
     match args.command {

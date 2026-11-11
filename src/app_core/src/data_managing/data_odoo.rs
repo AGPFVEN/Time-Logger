@@ -16,35 +16,30 @@ pub struct OdooStorage {
     projects: Option<ExecuteKwResponse>,
 }
 
-// TODO: No usar magic strings para los datos como la db, user y password
 impl OdooStorage {
-    pub fn new() -> Self {
-        let client = match OdooClient::new_reqwest_blocking("http://100.74.16.39:10018") {
+    pub fn new(url: &str, db: &str, username: &str, token: &str) -> Self {
+        let client = match OdooClient::new_reqwest_blocking(url) {
             Ok(res) => res,
             Err(err) => {
                 panic!("An error ocurred when sending request to odoo: {}", err);
             }
         };
 
-        let authenticated_client = match client.authenticate("testing", "admin", "a") {
+        let authenticated_client = match client.authenticate(db, username, token) {
             Ok(res) => res,
             Err(error) => {
                 panic!("An error ocurred when authenticating to odoo: {}", error);
             }
         };
 
-        return Self {
+        Self {
             odoo_client: RefCell::new(authenticated_client),
             projects: None,
-        };
+        }
     }
 }
 
 impl Storage for OdooStorage {
-    fn init(db_path: &str) -> Self {
-        Self::new()
-    }
-
     // TODO: guardar en una posición absoluta como un .time-logger/data
     fn get_timer_state(&self) -> (TimerState, Option<i32>) {
         let nombre_archivo = "cualquier_nombre.txt";
