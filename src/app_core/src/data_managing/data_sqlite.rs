@@ -14,7 +14,7 @@ pub struct SqliteStorage {
 }
 
 impl SqliteStorage {
-    fn new(db_path: &str) -> Self {
+    pub fn new(db_path: &str) -> Self {
         Self {
             connection: Mutex::new(db::establish_connection(db_path)),
         }
@@ -29,10 +29,6 @@ impl SqliteStorage {
 }
 
 impl Storage for SqliteStorage {
-    fn init(db_path: &str) -> Self {
-        Self::new(db_path)
-    }
-
     fn get_timer_state(&self) -> (TimerState, Option<i32>) {
         match queries::time_entries::find_incomplete(&mut self.lock_db_mutex()) {
             Some(entry) => (TimerState::Started, Some(entry.id)),

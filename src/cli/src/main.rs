@@ -11,9 +11,6 @@ use subcommands::{
 
 // Structure of config file
 #[derive(Deserialize, Debug)]
-struct ConfigPrincipal {
-    storage: StorageConfig,
-}
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -42,30 +39,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Get all arguments
     let args = Args::parse();
 
-    // Read, parse and validate config file
-    let config_file_content = match fs::read_to_string(&args.config_path) {
-        Ok(content) => content,
-        Err(error) => match error.kind() {
-            ErrorKind::NotFound => {
-                panic!("Config file could not be found");
-            }
-            _ => {
-                panic!("Error trying to read config file");
-            }
-        },
-    };
-    let config: ConfigPrincipal =
-        toml::from_str(&config_file_content).expect("Error while parsing config file");
-
-    // Set up storage configuration
-    let storage_obj: Box<dyn Storage> = match config.storage {
-        StorageConfig::Sqlite { database_url } => {
-            Box::new(app_core::data_managing::data_sqlite::SqliteStorage::new(&database_url))
-        }
-        StorageConfig::Odoo { url, db, username, token } => {
-            Box::new(app_core::data_managing::data_odoo::OdooStorage::new(&url, &db, &username, &token))
-        }
-    };
+    // Lectura, parseo e inicialización en 3 líneas
+    let storage_obj = config.storage.build();
 
     // Route subcommand
     match args.command {
