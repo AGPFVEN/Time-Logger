@@ -2,21 +2,16 @@ use clap::{Parser, Subcommand};
 use serde::Deserialize;
 use std::{fs, io::ErrorKind, panic};
 
-use app_core::data_managing::{Storage, TimerState};
+use app_core::data_managing::{Storage, TimerState, StorageConfig};
 mod subcommands;
 use subcommands::{
     link_tasks::link_tasks,
     record_time_entry::{end_record_note, start_record_note},
 };
 
-// Structure of config file
 #[derive(Deserialize, Debug)]
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-enum StorageConfig {
-    Sqlite { database_url: String },
-    Odoo { url: String, db: String, username: String, token: String },
+struct ConfigPrincipal {
+    storage: StorageConfig,
 }
 
 // Flags
@@ -40,7 +35,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     // Lectura, parseo e inicialización en 3 líneas
-    let storage_obj = config.storage.build();
+    let config_content = match fs::read_to_string(&args.config_path) {
+        Ok(content) => content,
+        Err(err) => match err.kind() {
+            ErrorKind::NotFound => {
+                return Err(format!(
+                    "Config file could not be found in '{}'",
+                    args.config_path.display()
+                )
+                .into());
+            }
+            ErrorKind::PermissionDenied => {
+                return Err(format!(
+                    "There's no permission to read '{}'",
+                    args.config_path.display()
+                )
+                .into());
+            }
+            _ => return Err(Box::new(err)),
+        },
+    };
+
+    let config: ConfigPrincipal = match toml::from_str(&config_content) {
+        Ok(parsed) => parsed,
+        Err(err) => {
+            // `err` de toml::de::Error incluye la línea y columna exacta del fallo
+            return Err(format!("Error al parsear el TOML:\n{err}").into());
+        }
+    };
+
+    let storage_obj: Box<dyn Storage> = config.storage.build();
 
     // Route subcommand
     match args.command {
@@ -55,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Err(_) => panic!("Error ending timer"),
                 }
             }
-            wer => panic!("The operation related to recording a time entry couldn't be identified"),
+            _ => panic!("The operation related to recording a time entry couldn't be identified"),
         },
         Commands::Link => match link_tasks(storage_obj) {
             Ok(_) => println!("Task link succesful"),

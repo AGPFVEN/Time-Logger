@@ -1,5 +1,6 @@
 use chrono::Local;
 use diesel::prelude::*;
+use anyhow::Result;
 use std::sync::{Mutex, MutexGuard};
 
 mod db;
@@ -80,22 +81,23 @@ impl Storage for SqliteStorage {
         &self,
         project_name: &str,
         task_name: &str,
-    ) -> Result<(), diesel::result::Error> {
+    ) -> Result<()> {
         // This constant is used for the mutex to be closed as less time as possible
         let start_time_formatted = &Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
-        return queries::time_entries::create_time_entry(
+        queries::time_entries::create_time_entry(
             &mut self.lock_db_mutex(),
             project_name,
             task_name,
             &start_time_formatted,
-        );
+        )?;
+        Ok(())
     }
 
     fn end_timer_on_task(
         &self,
         entry_to_close_id: &i32,
         description_input: &str,
-    ) -> Result<(), diesel::result::Error> {
+    ) -> Result<()> {
         // This constant is used for the mutex to be closed as less time as possible
         let end_time_formatted = &Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
         queries::time_entries::close_time_entry(
@@ -103,7 +105,8 @@ impl Storage for SqliteStorage {
             entry_to_close_id,
             end_time_formatted,
             description_input,
-        )
+        )?;
+        Ok(())
     }
 
     fn link_task_2_task(&self, project_name: &str, task_parent_name: &str, task_child_name: &str) {
